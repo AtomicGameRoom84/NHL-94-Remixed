@@ -48,6 +48,27 @@ Windows included. Only `build` and `verify` — plus edits written as
 binutils-m68k-linux-gnu`, or WSL/MSYS2 on Windows). The toolkit says so
 explicitly rather than failing obscurely when they're absent.
 
+## Testing it
+
+```
+cd toolkit
+python -m pytest                                     # 55 tests, no ROM needed
+genesis-toolkit selftest "your rom.md" --map maps/nhl94-ue.json
+```
+
+`selftest` checks every guarantee end to end against *your* cartridge —
+header and checksum, a byte-exact disassemble/reassemble round-trip,
+patch application and guard behaviour, checksum repair, an IPS
+round-trip, the data map, and that your original file is untouched
+afterwards. It takes a couple of seconds and exits non-zero on failure,
+so it works in CI.
+
+It cannot tell you a ROM **boots**. That needs an emulator and a human:
+build an *unmodified* ROM first (it should be byte-identical, so any
+misbehaviour is the toolkit's fault, not your mod's), then apply a mod
+with a visible effect — renaming a team shows up on screen — and confirm
+you see it.
+
 ## What's in here
 
 | | |

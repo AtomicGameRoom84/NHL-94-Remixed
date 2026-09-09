@@ -266,6 +266,28 @@ def cmd_consts(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_selftest(args: argparse.Namespace) -> int:
+    from . import selftest as selftest_mod
+    result = selftest_mod.run(
+        Path(args.rom),
+        Path(args.map) if args.map else None,
+        Path(args.workdir) if args.workdir else None,
+    )
+    for status, name, detail in result.checks:
+        suffix = f"  ({detail})" if detail else ""
+        print(f"  {status:<4} {name}{suffix}")
+
+    total = len(result.checks)
+    passed = total - result.failed - result.skipped
+    print(f"\n{passed}/{total} checks passed"
+          + (f", {result.skipped} skipped" if result.skipped else "")
+          + (f", {result.failed} FAILED" if result.failed else ""))
+    if not result.failed:
+        print("\nEverything machine-checkable is verified. The one thing this "
+              "cannot prove is that a ROM boots -- load it in an emulator.")
+    return 1 if result.failed else 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="genesis-toolkit")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -332,6 +354,14 @@ def main(argv=None) -> int:
                    help="field assignment; repeatable")
     p.add_argument("--name", default="map-edit", help="name recorded in the mod file")
     p.set_defaults(func=cmd_map_set)
+
+    p = sub.add_parser("selftest",
+                       help="verify every guarantee end-to-end against your ROM")
+    p.add_argument("rom")
+    p.add_argument("--map", help="also check a data map against this ROM")
+    p.add_argument("--workdir", help="where to put scratch files (default: "
+                                     "alongside the ROM)")
+    p.set_defaults(func=cmd_selftest)
 
     p = sub.add_parser("consts", help="find code referencing an immediate value")
     p.add_argument("rom")

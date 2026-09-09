@@ -163,7 +163,19 @@ reports as data that should have been code). That iterative refinement
 built over months, not one sitting -- is what this toolkit is meant to
 support, not replace.
 
-Run the tests with `python -m pytest` from this directory (requires
+## Verifying it against your own ROM
+
+```
+genesis-toolkit selftest path/to/some.md --map maps/nhl94-ue.json
+```
+
+Runs every machine-checkable guarantee end to end -- header/checksum, a
+byte-exact disassemble/reassemble round-trip, patch application and
+`expect` guard behaviour, checksum repair, an IPS round-trip, the data
+map, and that the original file is untouched afterwards. Exits non-zero
+on failure. It cannot prove a ROM boots; that needs an emulator.
+
+Run the unit tests with `python -m pytest` from this directory (requires
 `m68k-linux-gnu-as`/`objcopy`, e.g. `apt install binutils-m68k-linux-gnu`,
 for the round-trip tests -- they're skipped automatically if that's not
 installed).
