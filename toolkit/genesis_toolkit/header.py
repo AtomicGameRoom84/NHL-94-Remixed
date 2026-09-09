@@ -40,11 +40,18 @@ def _ascii(raw: bytes) -> str:
 
 def compute_checksum(rom: bytes) -> int:
     """Genesis checksum: 16-bit sum of every big-endian word from 0x200
-    to end of file, wrapping mod 0x10000."""
+    to the end of the cartridge, wrapping mod 0x10000.
+
+    "End of the cartridge" is the ROM end address declared at 0x1A4, not
+    necessarily the end of the file -- an overdumped or padded image has
+    trailing bytes past it that the console (and the game's own
+    self-check) never sums. Falls back to the file length when the
+    declared end is missing or implausible.
+    """
     total = 0
-    # Genesis header checksum covers bytes from 0x200 onward; the file
-    # must be an even length for this to be well-defined.
-    body = rom[0x200:]
+    declared_end = int.from_bytes(rom[0x1A4:0x1A8], "big") + 1 if len(rom) >= 0x1A8 else 0
+    end = declared_end if 0x200 < declared_end <= len(rom) else len(rom)
+    body = rom[0x200:end]
     if len(body) % 2:
         body = body + b"\x00"
     for i in range(0, len(body), 2):

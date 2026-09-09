@@ -174,13 +174,38 @@ def _split_spans_at(spans, addrs: set[int]):
     return out
 
 
+def _unresolvable_pcrel(insn: Instruction, labels: dict[int, str]) -> bool:
+    """True if this instruction encodes a PC-relative field whose target
+    can't be bound to a real positional label -- because it lands inside
+    another instruction (which can't be split) or outside the ROM.
+
+    This has to be caught here rather than left to the assembler. GAS
+    computes a PC-relative field from the current address, so handing it
+    a bare literal gives the wrong displacement, and handing it a label
+    that's referenced but never defined is worse: `as` and `objcopy`
+    both exit 0 and simply write zeros into the field. Emitting the
+    original bytes instead keeps `build` honest even with no `verify`
+    pass to catch it afterwards."""
+    for m in _PCREL_HEX.finditer(insn.op_str):
+        if int(m.group(1), 16) not in labels:
+            return True
+    if _is_relative_branch(insn.mnemonic):
+        target = _branch_target(insn.mnemonic, insn.op_str)
+        if target is not None and target not in labels:
+            return True
+    return False
+
+
 def _rewrite_operands(insn: Instruction, labels: dict[int, str]) -> str:
     op_str = _fixup_moveq_immediate(insn.mnemonic, insn.op_str)
 
     if _PCREL_HEX.search(op_str):
         def pcrel_repl(m: re.Match) -> str:
-            target = int(m.group(1), 16)
-            return labels.get(target, f"0x{m.group(1)}")
+            # Indexing rather than .get(): callers screen instructions
+            # through _unresolvable_pcrel first, so a missing label is a
+            # broken invariant. Better to raise than to quietly emit a
+            # literal GAS would turn into the wrong displacement.
+            return labels[int(m.group(1), 16)]
         op_str = _PCREL_HEX.sub(pcrel_repl, op_str)
     elif _is_relative_branch(insn.mnemonic):
         target = _branch_target(insn.mnemonic, insn.op_str)
@@ -200,9 +225,23 @@ def emit_asm(spans, entry_points: list[tuple[str, int]], rom_len: int) -> str:
     positional_targets.update(addr for _, addr in entry_points if 0 <= addr < rom_len)
     spans = _split_spans_at(spans, positional_targets)
 
-    labels: dict[int, str] = {addr: name for name, addr in entry_points}
+    # Only bind a label to an address a label can actually be *placed*
+    # at. _split_spans_at opens up any data address, but a target
+    # landing inside an instruction has no span of its own, and
+    # referencing a name that never gets defined assembles silently to
+    # zeros -- see _unresolvable_pcrel, which routes those instructions
+    # to raw bytes instead.
+    span_starts = {span.address for span in spans}
+    labels: dict[int, str] = {addr: name for name, addr in entry_points
+                              if addr in span_starts}
     for addr in positional_targets:
-        labels.setdefault(addr, _label_name(addr))
+        if addr in span_starts:
+            labels.setdefault(addr, _label_name(addr))
+
+    def raw_line(span, reason: str) -> str:
+        byte_list = ",".join(f"0x{b:02x}" for b in span.raw)
+        return (f"\t.byte {byte_list}"
+                f"\t/* {span.address:06x}: {span.raw.hex()} ({reason}) */")
 
     lines = ["\t.org 0"]
     for span in spans:
@@ -210,10 +249,10 @@ def emit_asm(spans, entry_points: list[tuple[str, int]], rom_len: int) -> str:
             lines.append(f"{labels[span.address]}:")
         if isinstance(span, Instruction):
             if _gas_would_relax_to_moveq(span.mnemonic, span.op_str):
-                byte_list = ",".join(f"0x{b:02x}" for b in span.raw)
-                lines.append(f"\t.byte {byte_list}"
-                              f"\t/* {span.address:06x}: {span.raw.hex()}"
-                              f" (move.l->moveq relax avoided) */")
+                lines.append(raw_line(span, "move.l->moveq relax avoided"))
+                continue
+            if _unresolvable_pcrel(span, labels):
+                lines.append(raw_line(span, "unbindable PC-relative target"))
                 continue
             op = _rewrite_operands(span, labels)
             mnemonic = _normalize_mnemonic(span.mnemonic)

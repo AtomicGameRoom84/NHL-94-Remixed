@@ -69,10 +69,11 @@ def code_entry_points(rom: bytes) -> list[tuple[str, int]]:
         if entry.name == "initial_sp":
             continue
         addr = entry.address
-        # Addresses inside the vector table itself (0x000-0x0FF) can
-        # never be real code -- an unset/reserved vector is typically
-        # left as 0x000000, which would otherwise be misread as "code
-        # starts at the beginning of the vector table".
-        if addr % 2 == 0 and 0x100 <= addr < rom_len:
+        # Nothing below 0x200 can be real code: 0x000-0x0FF is the
+        # vector table itself and 0x100-0x1FF is the cartridge header
+        # (ASCII titles and range fields). An unset/reserved vector is
+        # typically left as 0x000000, which would otherwise be misread
+        # as "code starts at the beginning of the vector table".
+        if addr % 2 == 0 and 0x200 <= addr < rom_len:
             out.append((entry.name, addr))
     return out

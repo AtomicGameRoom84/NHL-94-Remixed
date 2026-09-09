@@ -41,6 +41,24 @@ def test_relative_branch_excludes_jmp_jsr():
     assert not asmgen._is_relative_branch("jsr")
 
 
+def test_unbindable_branch_target_falls_back_to_raw_bytes():
+    # The target (0x06) lands inside the 6-byte instruction at 0x04, so
+    # no label can be placed there. Emitting a reference to an undefined
+    # label would assemble silently to zeros, so the branch must come
+    # out as its original bytes instead.
+    from genesis_toolkit.disasm import Instruction
+
+    spans = [
+        Instruction(address=0x00, size=4, mnemonic="bsr.w", op_str="$6",
+                    raw=bytes.fromhex("61000002")),
+        Instruction(address=0x04, size=6, mnemonic="move.l", op_str="#$100, d0",
+                    raw=bytes.fromhex("203c00000100")),
+    ]
+    text = asmgen.emit_asm(spans, [("reset", 0)], rom_len=0x10)
+    assert "L000006" not in text
+    assert "0x61,0x00,0x00,0x02" in text
+
+
 def test_pcrel_and_branch_labels_are_positional_not_set():
     # emit_asm must place a real "name:" label at every branch/PC-
     # relative target -- an absolute .set constant looks identical to

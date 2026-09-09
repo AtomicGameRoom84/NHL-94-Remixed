@@ -35,7 +35,6 @@ def test_disasm_reassemble_roundtrip(tmp_path: Path):
     assert report.exact_match, report.summary()
 
 
-@pytest.mark.skipif(not _has_m68k_as(), reason="m68k-linux-gnu-as not installed")
 def test_recursive_descent_finds_both_entry_points():
     rom = build_fixture_rom()
     entry_points = [("reset", 0x400), ("vblank", 0x418)]

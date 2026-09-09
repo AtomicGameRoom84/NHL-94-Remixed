@@ -19,10 +19,28 @@ from pathlib import Path
 
 AS = "m68k-linux-gnu-as"
 OBJCOPY = "m68k-linux-gnu-objcopy"
+NM = "m68k-linux-gnu-nm"
 
 
 class AssembleError(RuntimeError):
     pass
+
+
+def _undefined_symbols(obj_path: Path) -> list[str]:
+    """Names the object file references but never defines.
+
+    This toolkit goes straight from `as` to `objcopy` with no link step,
+    which is where an undefined symbol would normally be caught. Without
+    that step nothing complains: `as` exits 0, `objcopy` exits 0, and the
+    unresolved field is simply written as zeros. A disassembly that
+    references a label it forgot to define would therefore produce a
+    quietly corrupt ROM, so check for it explicitly.
+    """
+    proc = subprocess.run([NM, "--undefined-only", str(obj_path)],
+                          capture_output=True, text=True)
+    if proc.returncode != 0:
+        return []
+    return [line.split()[-1] for line in proc.stdout.splitlines() if line.strip()]
 
 
 def assemble(asm_path: Path, out_bin: Path) -> None:
@@ -35,6 +53,16 @@ def assemble(asm_path: Path, out_bin: Path) -> None:
         )
         if proc.returncode != 0:
             raise AssembleError(proc.stdout + proc.stderr)
+
+        undefined = _undefined_symbols(obj_path)
+        if undefined:
+            shown = ", ".join(sorted(undefined)[:10])
+            more = f" (and {len(undefined) - 10} more)" if len(undefined) > 10 else ""
+            raise AssembleError(
+                f"{len(undefined)} undefined symbol(s) referenced but never "
+                f"defined: {shown}{more}. These would have been silently "
+                f"assembled as zeros."
+            )
 
         proc = subprocess.run(
             [OBJCOPY, "-O", "binary", str(obj_path), str(out_bin)],
@@ -165,17 +193,27 @@ def assemble_and_reconcile(reference: bytes, asm_path: Path, out_bin: Path,
     """
     text = asm_path.read_text()
     all_patched: list[tuple[str, int, int]] = []
+    settled = False
     for _ in range(max_passes):
         text, gas_patched = _assemble_patching_rejects(text, out_bin, max_passes)
         all_patched.extend(("gas-reject", ln, addr) for ln, addr in gas_patched)
 
         rebuilt = out_bin.read_bytes()
         if rebuilt == reference:
+            settled = True
             break
         text, mismatches = patch_byte_mismatches(text, reference, rebuilt)
         if not mismatches:
+            settled = True
             break
         all_patched.extend(("byte-mismatch", ln, addr) for ln, addr in mismatches)
+    if not settled:
+        # Ran out of passes with patches still pending. Those edits are
+        # in `text` but not yet reflected in out_bin, so assemble once
+        # more -- otherwise the caller diffs a binary that no longer
+        # corresponds to the source we're about to write out.
+        text, gas_patched = _assemble_patching_rejects(text, out_bin, max_passes)
+        all_patched.extend(("gas-reject", ln, addr) for ln, addr in gas_patched)
     asm_path.write_text(text)
     return all_patched
 

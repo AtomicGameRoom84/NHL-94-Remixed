@@ -8,10 +8,13 @@ any extra addresses the caller supplies (e.g. discovered jump-table
 targets). Anything never reached by that walk is emitted as data.
 
 This is a heuristic, same as any disassembler applied to a binary with
-no debug symbols: it will under-approximate code (some code reached only
-through indirect jumps/jump tables won't be found) but it will not
-mis-classify data as code the way a naive linear sweep does, which is
-what matters for keeping the output re-assemblable.
+no debug symbols. It under-approximates code: anything reached only
+through an indirect jump or a jump table won't be found without
+supplying its address explicitly. It is also far less prone than a
+naive linear sweep to running away through data -- but not immune,
+since a mis-taken branch can still land mid-blob, and capstone will
+happily decode plausible-looking bytes. Treat the code/data split as a
+starting point to refine against `verify` output, not as ground truth.
 """
 from __future__ import annotations
 
@@ -103,6 +106,18 @@ def recursive_descent(rom: bytes, entry_points: list[tuple[str, int]]) -> Disasm
                 break
 
             insn = insns[0]
+            # For some undecodable words capstone doesn't stop -- it
+            # emits a `dc.w $xxxx` pseudo-instruction (a data directive,
+            # not an opcode) and carries on. Taken at face value that
+            # would let the walk chew straight through a data blob,
+            # recording each word as "code" and feeding whatever the
+            # bytes happen to look like into the branch-target
+            # worklist, which is exactly what recursive descent exists
+            # to avoid. Treat it as the decode failure it is.
+            if insn.mnemonic.split(".")[0] == "dc":
+                result.decode_failures.append(cur)
+                break
+
             if cur in result.instructions:
                 break
             result.instructions[cur] = Instruction(
