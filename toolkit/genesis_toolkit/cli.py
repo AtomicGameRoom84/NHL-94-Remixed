@@ -122,10 +122,12 @@ def cmd_verify(args: argparse.Namespace) -> int:
 def cmd_patch(args: argparse.Namespace) -> int:
     rom = _load(args.rom)
     try:
+        # load_mod assembles any "asm" edits, so this can also surface
+        # a missing toolchain or a rejected instruction.
         name, edits = patch_mod.load_mod(Path(args.mod))
         patched = patch_mod.apply_edits(rom, edits,
                                         fix_checksum=not args.no_fix_checksum)
-    except patch_mod.PatchError as e:
+    except (patch_mod.PatchError, build_mod.AssembleError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
     Path(args.out).write_bytes(patched)
@@ -208,6 +210,13 @@ def cmd_map_set(args: argparse.Namespace) -> int:
     rom = _load(args.rom)
     try:
         dmap = datamap_mod.load_map(Path(args.map))
+        # Check before generating anything: against the wrong dump the
+        # edits would be built from wrong bytes, and their `expect`
+        # guards would be derived from those same wrong bytes -- so
+        # nothing downstream would catch it either.
+        warning = datamap_mod.check_rom_matches(dmap, rom)
+        if warning:
+            print(f"warning: {warning}", file=sys.stderr)
         assignments = dict(datamap_mod.parse_assignment(a) for a in args.set)
         edits = datamap_mod.make_edits(rom, dmap, assignments)
     except patch_mod.PatchError as e:

@@ -34,7 +34,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from .patch import Edit, PatchError
+from .patch import Edit, PatchError, _parse_int
 
 INT_TYPES = {"u8": 1, "u16": 2, "u32": 4}
 
@@ -76,14 +76,16 @@ def load_map(path: Path) -> DataMap:
     fields = []
     for i, raw in enumerate(doc["fields"]):
         where = f"{path}: fields[{i}]"
+        if not isinstance(raw, dict):
+            raise PatchError(f"{where}: must be an object")
         name = raw.get("name")
         if not isinstance(name, str) or not name:
             raise PatchError(f"{where}: needs a name")
         ftype = raw.get("type")
-        at = raw.get("at")
-        address = int(at, 0) if isinstance(at, str) else at
-        if not isinstance(address, int):
-            raise PatchError(f"{where}: \"at\" must be an integer or hex string")
+        # Shares patch.py's parser so a malformed address raises
+        # PatchError like every other input problem, rather than a bare
+        # ValueError escaping the CLI's error handling.
+        address = _parse_int(raw.get("at"), f"{where}.at")
 
         if ftype in INT_TYPES:
             size = INT_TYPES[ftype]
@@ -120,6 +122,10 @@ def check_rom_matches(dmap: DataMap, rom: bytes) -> str | None:
 
 
 def read_field(rom: bytes, field: Field):
+    if field.address < 0:
+        raise PatchError(f"field {field.name!r} has a negative address "
+                         f"({field.address}); Python would slice from the end "
+                         f"of the ROM and report plausible-looking garbage")
     if field.end > len(rom):
         raise PatchError(f"field {field.name!r} at 0x{field.address:06x} is past "
                          f"the end of the ROM")

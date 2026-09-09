@@ -215,12 +215,19 @@ def create_ips(original: bytes, modified: bytes) -> bytes:
 
     out = bytearray(IPS_MAGIC)
     for offset, length in _diff_runs(original, modified):
-        if offset == _EOF_OFFSET and offset > 0:
-            # Extend one byte earlier so the record's offset isn't the
-            # literal bytes "EOF", which would truncate the patch.
-            offset -= 1
-            length += 1
         while length > 0:
+            if offset == _EOF_OFFSET:
+                # A record whose 3-byte offset is literally "EOF" ends
+                # the patch early, silently dropping everything after
+                # it. Start one byte sooner instead; that byte gets
+                # rewritten with the value it already has.
+                #
+                # This has to be checked per chunk rather than once per
+                # run: the 0xFFFF chunk split below can land a *later*
+                # record exactly on the offset even when the run began
+                # nowhere near it.
+                offset -= 1
+                length += 1
             chunk = min(length, _IPS_MAX_CHUNK)
             out += offset.to_bytes(3, "big")
             out += chunk.to_bytes(2, "big")

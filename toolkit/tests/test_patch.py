@@ -133,6 +133,37 @@ def test_bare_branch_target_is_rejected_not_silently_zeroed():
 
 
 @pytest.mark.skipif(not _has_m68k_as(), reason="m68k-linux-gnu-as not installed")
+def test_dbcc_bare_target_is_rejected():
+    # DBcc puts its counter register first, so a guard that inspects the
+    # first operand sees "d0" and lets the real target through.
+    # `dbra d0, 0x420` assembles to a zero displacement: an infinite loop.
+    with pytest.raises(build_mod.AssembleError, match="silently encode the wrong target"):
+        build_mod.assemble_at("\tdbra d0, 0x420", 0x400)
+    assert build_mod.assemble_at("\tdbra d0, rom+0x420", 0x400) == bytes.fromhex("51c8001e")
+
+
+@pytest.mark.skipif(not _has_m68k_as(), reason="m68k-linux-gnu-as not installed")
+def test_label_on_the_same_line_does_not_bypass_the_guard():
+    with pytest.raises(build_mod.AssembleError, match="silently encode the wrong target"):
+        build_mod.assemble_at("spot: bra.w 0x420", 0x400)
+
+
+def test_ips_record_never_starts_on_the_eof_offset():
+    # A record whose 3-byte offset is literally "EOF" truncates the
+    # patch. The 0xFFFF chunk split can land a *later* record there even
+    # when the run started nowhere near it.
+    eof = patch_mod._EOF_OFFSET
+    original = bytes(eof + 0x200)
+    for start in (eof - patch_mod._IPS_MAX_CHUNK, eof):
+        modified = bytearray(original)
+        for i in range(start, eof + 0x100):
+            modified[i] = 0xAB
+        modified = bytes(modified)
+        ips = patch_mod.create_ips(original, modified)
+        assert patch_mod.apply_ips(original, ips) == modified, f"run from 0x{start:x}"
+
+
+@pytest.mark.skipif(not _has_m68k_as(), reason="m68k-linux-gnu-as not installed")
 def test_non_pcrel_bare_address_is_still_allowed():
     # jsr uses absolute addressing, so a literal is correct there.
     assert build_mod.assemble_at("\tjsr 0x1234.l", 0x400) == bytes.fromhex("4eb900001234")

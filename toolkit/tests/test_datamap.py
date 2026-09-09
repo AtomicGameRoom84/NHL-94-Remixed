@@ -118,6 +118,30 @@ def test_unknown_field_and_bad_map_are_errors(tmp_path: Path):
         dm.load_map(worse)
 
 
+def test_malformed_map_raises_patcherror_not_valueerror(tmp_path: Path):
+    # The CLI only catches PatchError; a bare ValueError/AttributeError
+    # escaping here surfaces as a traceback.
+    bad_addr = tmp_path / "a.json"
+    bad_addr.write_text(json.dumps({"fields": [
+        {"name": "x", "at": "0646", "type": "u8"}]}))
+    with pytest.raises(patch_mod.PatchError, match="integer or hex string"):
+        dm.load_map(bad_addr)
+
+    not_object = tmp_path / "b.json"
+    not_object.write_text(json.dumps({"fields": ["nope"]}))
+    with pytest.raises(patch_mod.PatchError, match="must be an object"):
+        dm.load_map(not_object)
+
+
+def test_negative_address_is_rejected_not_wrapped(tmp_path: Path):
+    # Python would slice from the end of the ROM and report plausible
+    # garbage rather than failing.
+    rom = build_fixture_rom()
+    path = _write_map(tmp_path, [{"name": "x", "at": -4, "type": "u32"}])
+    with pytest.raises(patch_mod.PatchError, match="negative address"):
+        dm.read_field(rom, dm.load_map(path).get("x"))
+
+
 def test_parse_assignment():
     assert dm.parse_assignment("a.b = 5") == ("a.b", "5")
     with pytest.raises(patch_mod.PatchError):

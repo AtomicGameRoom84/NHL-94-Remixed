@@ -97,8 +97,10 @@ def assemble(asm_path: Path, out_bin: Path) -> None:
 _PCREL_MNEMONIC = re.compile(
     r"^\s*(?:b(?:ra|sr|hi|ls|cc|cs|ne|eq|vc|vs|pl|mi|ge|lt|gt|le)"
     r"|db(?:ra|f|t|hi|ls|cc|cs|ne|eq|vc|vs|pl|mi|ge|lt|gt|le))"
-    r"(?:\.[bwsl])?\s+(\S+)", re.IGNORECASE)
+    r"(?:\.[bwsl])?\s+(.+)$", re.IGNORECASE)
 _BARE_NUMBER = re.compile(r"^[-+]?(?:0x[0-9a-fA-F]+|\$[0-9a-fA-F]+|\d+)$")
+# A label may share a line with the instruction it marks.
+_LABEL_PREFIX = re.compile(r"^\s*[A-Za-z_.$][\w.$]*:\s*")
 
 ROM_BASE_LABEL = "rom"
 EDIT_SITE_LABEL = "here"
@@ -116,10 +118,14 @@ def _reject_bare_pcrel_targets(source: str) -> None:
     """
     for lineno, raw in enumerate(source.splitlines(), 1):
         line = raw.split("|")[0].split("/*")[0]
+        line = _LABEL_PREFIX.sub("", line)
         m = _PCREL_MNEMONIC.match(line)
         if not m:
             continue
-        operand = m.group(1).rstrip(",")
+        # The branch target is always the *last* operand: a DBcc puts
+        # its counter register first, so checking the first operand
+        # would inspect "d0" and wave the real target through.
+        operand = m.group(1).split(",")[-1].strip()
         if _BARE_NUMBER.match(operand):
             raise AssembleError(
                 f"line {lineno}: {line.strip()!r} branches to the bare address "
