@@ -79,7 +79,11 @@ def load_mod(path: Path) -> tuple[str, list[Edit]]:
     """Read a mod file, assembling any `asm` edits so every edit comes
     back as concrete bytes."""
     try:
-        doc = json.loads(path.read_text())
+        text = path.read_text()
+    except FileNotFoundError:
+        raise PatchError(f"no such mod file: {path}") from None
+    try:
+        doc = json.loads(text)
     except json.JSONDecodeError as e:
         raise PatchError(f"{path}: invalid JSON ({e})") from e
     if not isinstance(doc, dict):

@@ -7,6 +7,10 @@ Everything here works from a ROM *you* supply. No ROM, no disassembly of
 one, and no game content lives in this repository — see
 [What's deliberately not here](#whats-deliberately-not-here).
 
+**New to this? Start with [GETTING-STARTED.md](GETTING-STARTED.md)** --
+a step-by-step Windows walkthrough from installing Python to seeing your
+first mod in an emulator, with a way to check each step worked.
+
 ## The mental model
 
 The thing people usually trip over: **you don't patch the disassembly,
@@ -42,7 +46,7 @@ genesis-toolkit ips-create "your rom.md" modded.md mymod.ips # shareable patch
 Load `modded.md` in any emulator (BlastEm, Genesis Plus GX, Exodus, a
 RetroArch core) or flash it to a cartridge.
 
-**Ten of the twelve commands are pure Python** and run anywhere,
+**Eleven of the thirteen commands run with nothing but Python**, on
 Windows included. Only `build` and `verify` — plus edits written as
 `asm` rather than `bytes` — shell out to GNU m68k binutils (`apt install
 binutils-m68k-linux-gnu`, or WSL/MSYS2 on Windows). The toolkit says so
@@ -52,7 +56,7 @@ explicitly rather than failing obscurely when they're absent.
 
 ```
 cd toolkit
-python -m pytest                                     # 55 tests, no ROM needed
+python -m pytest                                     # 61 tests, no ROM needed
 genesis-toolkit selftest "your rom.md" --map maps/nhl94-ue.json
 ```
 
@@ -75,7 +79,7 @@ you see it.
 |---|---|
 | `toolkit/genesis_toolkit/` | the library and `genesis-toolkit` CLI |
 | `toolkit/maps/nhl94-ue.json` | data map: all 28 NHL '94 team headers |
-| `toolkit/tests/` | 50 tests, incl. a synthetic non-copyrighted fixture ROM |
+| `toolkit/tests/` | 61 tests, incl. a synthetic non-copyrighted fixture ROM |
 
 Capabilities, in rough order of how you'd meet them:
 

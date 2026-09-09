@@ -23,8 +23,19 @@ from .disasm import linear_map, recursive_descent
 from .asmgen import emit_asm
 
 
+class InputError(Exception):
+    """A problem with something the user pointed us at."""
+
+
 def _load(path: str) -> bytes:
-    return Path(path).read_bytes()
+    try:
+        return Path(path).read_bytes()
+    except FileNotFoundError:
+        raise InputError(f"no such file: {path}") from None
+    except IsADirectoryError:
+        raise InputError(f"{path} is a directory, not a file") from None
+    except PermissionError:
+        raise InputError(f"no permission to read {path}") from None
 
 
 def cmd_header(args: argparse.Namespace) -> int:
@@ -370,7 +381,18 @@ def main(argv=None) -> int:
     p.set_defaults(func=cmd_consts)
 
     args = parser.parse_args(argv)
-    return args.func(args)
+    # One place to turn "you pointed me at the wrong thing" into a plain
+    # message. Getting a traceback for a mistyped path (or for running
+    # from the wrong directory, where a relative map path won't resolve)
+    # reads like the tool is broken rather than like a typo.
+    try:
+        return args.func(args)
+    except InputError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+    except (patch_mod.PatchError, build_mod.AssembleError) as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

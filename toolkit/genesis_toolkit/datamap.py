@@ -67,7 +67,14 @@ class DataMap:
 
 def load_map(path: Path) -> DataMap:
     try:
-        doc = json.loads(path.read_text())
+        text = path.read_text()
+    except FileNotFoundError:
+        raise PatchError(
+            f"no such map file: {path}. Map paths in the docs are relative to "
+            f"the toolkit directory -- either run from there, or give a full path."
+        ) from None
+    try:
+        doc = json.loads(text)
     except json.JSONDecodeError as e:
         raise PatchError(f"{path}: invalid JSON ({e})") from e
     if not isinstance(doc, dict) or not isinstance(doc.get("fields"), list):
