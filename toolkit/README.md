@@ -44,7 +44,10 @@ header/vector/disassembly/reassembly pipeline end to end.
   original bytes so the rest of the file can still be verified. The
   addresses that needed patching are exactly the punch list for
   improving the translator further.
-- `genesis_toolkit/cli.py` -- `genesis-toolkit header|vectors|disasm|build|verify`.
+- `genesis_toolkit/patch.py` -- the mod layer: a mod is a small JSON
+  file of edits, not a modified ROM. Applies edits, fixes up the header
+  checksum, and reads/writes IPS patches.
+- `genesis_toolkit/cli.py` -- `genesis-toolkit header|vectors|disasm|build|verify|patch|fix-checksum|ips-create|ips-apply`.
 
 ## Usage
 
@@ -59,6 +62,50 @@ genesis-toolkit verify  path/to/some.md out.s
 `verify` assembles `out.s` and diffs it byte-for-byte against the ROM.
 An `EXACT MATCH` means the disassembly (after any reported patches) is
 a faithful, re-assemblable representation of that ROM.
+
+## Modding
+
+A mod is a JSON file. Keeping mods as patches rather than edited ROM
+images means they're small, diffable, reviewable, and carry no
+copyrighted content -- so they can live in a repo while the ROM never
+does.
+
+```json
+{
+  "name": "faster-skating",
+  "edits": [
+    {"at": "0x78b0", "asm": "\tmove.w #0x28, d0", "expect": "303c001e",
+     "note": "was move.w #0x1e,d0"},
+    {"at": "0x9120", "bytes": "4e714e71", "note": "nop out the check"}
+  ]
+}
+```
+
+```
+genesis-toolkit patch      orig.md mod.json modded.md   # apply
+genesis-toolkit ips-create orig.md modded.md mod.ips    # share as a patch
+genesis-toolkit ips-apply  orig.md mod.ips  modded.md   # someone else applies it
+```
+
+Then load `modded.md` in any emulator (BlastEm, Genesis Plus GX,
+Exodus, a RetroArch core) or flash it to a cart.
+
+Three things the patcher does so an edit can't quietly go wrong:
+
+- **`expect` guards.** An edit records the bytes it assumes are already
+  there and refuses to apply if they differ. That turns "this mod was
+  written against another ROM revision" -- the failure mode ROM patches
+  are infamous for -- into an error naming the address, instead of
+  silent corruption.
+- **Edits are assembled at their real address**, so a branch or a
+  `(d16,PC)` operand resolves against where the code actually sits. Two
+  labels are in scope: `rom` is the start of the cartridge (`rom+0x420`
+  is absolute ROM address 0x420) and `here` is the edit site. Writing a
+  branch against a bare literal (`bra.w 0x420`) is rejected outright,
+  because GNU as reads that as a displacement and encodes a *zero*
+  target with no diagnostic.
+- **Overlapping edits, out-of-range edits, and stale checksums** are all
+  caught. Edits can never resize the cartridge.
 
 ## Honest scope
 

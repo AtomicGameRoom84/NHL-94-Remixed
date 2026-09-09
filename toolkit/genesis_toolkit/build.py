@@ -72,6 +72,75 @@ def assemble(asm_path: Path, out_bin: Path) -> None:
             raise AssembleError(proc.stdout + proc.stderr)
 
 
+# Mnemonics whose operand is encoded as a displacement from the current
+# address rather than as the address itself.
+_PCREL_MNEMONIC = re.compile(
+    r"^\s*(?:b(?:ra|sr|hi|ls|cc|cs|ne|eq|vc|vs|pl|mi|ge|lt|gt|le)"
+    r"|db(?:ra|f|t|hi|ls|cc|cs|ne|eq|vc|vs|pl|mi|ge|lt|gt|le))"
+    r"(?:\.[bwsl])?\s+(\S+)", re.IGNORECASE)
+_BARE_NUMBER = re.compile(r"^[-+]?(?:0x[0-9a-fA-F]+|\$[0-9a-fA-F]+|\d+)$")
+
+ROM_BASE_LABEL = "rom"
+EDIT_SITE_LABEL = "here"
+
+
+def _reject_bare_pcrel_targets(source: str) -> None:
+    """Refuse a branch written against a bare address literal.
+
+    GNU as reads a bare number on a PC-relative opcode as an
+    already-computed displacement rather than as a target to compute one
+    from, and quietly encodes the wrong value -- `bra.w 0x420` assembles
+    to a displacement of zero, an infinite loop, with no diagnostic. The
+    operand has to be an expression GAS can see as an address, which is
+    what the `rom` and `here` labels are for.
+    """
+    for lineno, raw in enumerate(source.splitlines(), 1):
+        line = raw.split("|")[0].split("/*")[0]
+        m = _PCREL_MNEMONIC.match(line)
+        if not m:
+            continue
+        operand = m.group(1).rstrip(",")
+        if _BARE_NUMBER.match(operand):
+            raise AssembleError(
+                f"line {lineno}: {line.strip()!r} branches to the bare address "
+                f"{operand}. GNU as would read that as a displacement and "
+                f"silently encode the wrong target. Write it relative to a "
+                f"label instead -- '{ROM_BASE_LABEL}+{operand}' for an absolute "
+                f"ROM address, or '{EDIT_SITE_LABEL}+N' for an offset from this "
+                f"edit."
+            )
+
+
+def assemble_at(source: str, address: int) -> bytes:
+    """Assemble a short snippet as if it lived at `address`, returning
+    just its bytes.
+
+    The address matters: a branch or a `(d16,PC)` operand encodes a
+    displacement from wherever the instruction actually sits, so
+    assembling an edit at offset 0 and dropping the result in at 0x7ac6
+    would encode the wrong target. Padding out to the real address costs
+    a temporary buffer and gets it right.
+
+    Two labels are in scope for the snippet: `rom` is the start of the
+    cartridge, so `rom+0x420` names absolute ROM address 0x420, and
+    `here` is the address of the edit itself.
+    """
+    if address < 0:
+        raise ValueError("address must be non-negative")
+    _reject_bare_pcrel_targets(source)
+    with tempfile.TemporaryDirectory() as tmp:
+        asm_path = Path(tmp) / "snippet.s"
+        out_bin = Path(tmp) / "snippet.bin"
+        asm_path.write_text(
+            f"{ROM_BASE_LABEL}:\n"
+            f"\t.org 0x{address:x}\n"
+            f"{EDIT_SITE_LABEL}:\n"
+            f"{source}\n"
+        )
+        assemble(asm_path, out_bin)
+        return out_bin.read_bytes()[address:]
+
+
 _ERROR_LINE = re.compile(r":(\d+): Error:")
 _INSN_COMMENT = re.compile(r"/\* ([0-9a-fA-F]{6}): ([0-9a-fA-F]+) \*/")
 

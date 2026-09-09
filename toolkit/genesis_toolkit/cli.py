@@ -14,6 +14,7 @@ from pathlib import Path
 
 from . import build as build_mod
 from . import header as header_mod
+from . import patch as patch_mod
 from . import vectors as vectors_mod
 from .disasm import linear_map, recursive_descent
 from .asmgen import emit_asm
@@ -115,6 +116,62 @@ def cmd_verify(args: argparse.Namespace) -> int:
     return 0 if report.exact_match else 2
 
 
+def cmd_patch(args: argparse.Namespace) -> int:
+    rom = _load(args.rom)
+    try:
+        name, edits = patch_mod.load_mod(Path(args.mod))
+        patched = patch_mod.apply_edits(rom, edits,
+                                        fix_checksum=not args.no_fix_checksum)
+    except patch_mod.PatchError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+    Path(args.out).write_bytes(patched)
+
+    print(f"Mod            : {name}")
+    for edit in edits:
+        note = f"  {edit.note}" if edit.note else ""
+        print(f"  0x{edit.address:06x}  {len(edit.data):2d} bytes  "
+              f"{edit.data.hex()}{note}")
+    changed = sum(1 for a, b in zip(rom, patched) if a != b)
+    print(f"Bytes changed  : {changed}")
+    print(f"Wrote          : {args.out}")
+    return 0
+
+
+def cmd_fix_checksum(args: argparse.Namespace) -> int:
+    rom = _load(args.rom)
+    before = header_mod.parse_header(rom)
+    fixed = patch_mod.fix_header_checksum(rom)
+    after = header_mod.parse_header(fixed)
+    Path(args.out).write_bytes(fixed)
+    print(f"Checksum: 0x{before.declared_checksum:04x} -> 0x{after.declared_checksum:04x} "
+          f"(computed 0x{after.computed_checksum:04x})")
+    print(f"Wrote   : {args.out}")
+    return 0
+
+
+def cmd_ips_create(args: argparse.Namespace) -> int:
+    try:
+        data = patch_mod.create_ips(_load(args.original), _load(args.modified))
+    except patch_mod.PatchError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+    Path(args.out).write_bytes(data)
+    print(f"Wrote {args.out} ({len(data)} bytes)")
+    return 0
+
+
+def cmd_ips_apply(args: argparse.Namespace) -> int:
+    try:
+        data = patch_mod.apply_ips(_load(args.rom), _load(args.patch))
+    except patch_mod.PatchError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+    Path(args.out).write_bytes(data)
+    print(f"Wrote {args.out} ({len(data)} bytes)")
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="genesis-toolkit")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -141,6 +198,31 @@ def main(argv=None) -> int:
     p.add_argument("rom")
     p.add_argument("asm")
     p.set_defaults(func=cmd_verify)
+
+    p = sub.add_parser("patch", help="apply a JSON mod file to a ROM")
+    p.add_argument("rom")
+    p.add_argument("mod", help="mod file describing the edits")
+    p.add_argument("out", help="patched ROM to write")
+    p.add_argument("--no-fix-checksum", action="store_true",
+                   help="leave the header checksum alone after patching")
+    p.set_defaults(func=cmd_patch)
+
+    p = sub.add_parser("fix-checksum", help="recompute the header checksum")
+    p.add_argument("rom")
+    p.add_argument("out")
+    p.set_defaults(func=cmd_fix_checksum)
+
+    p = sub.add_parser("ips-create", help="build an IPS patch from two ROMs")
+    p.add_argument("original")
+    p.add_argument("modified")
+    p.add_argument("out")
+    p.set_defaults(func=cmd_ips_create)
+
+    p = sub.add_parser("ips-apply", help="apply an IPS patch to a ROM")
+    p.add_argument("rom")
+    p.add_argument("patch")
+    p.add_argument("out")
+    p.set_defaults(func=cmd_ips_apply)
 
     args = parser.parse_args(argv)
     return args.func(args)
