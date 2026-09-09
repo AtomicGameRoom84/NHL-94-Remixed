@@ -31,6 +31,16 @@ def test_defined_symbol_assembles_cleanly(tmp_path: Path):
     assert out.read_bytes() == bytes.fromhex("4e716000fffe")
 
 
+def test_missing_toolchain_explains_itself(tmp_path: Path, monkeypatch):
+    # Most of the toolkit is pure Python; only the assembly-backed
+    # commands need binutils. A bare FileNotFoundError would hide that.
+    monkeypatch.setattr(build_mod, "AS", "definitely-not-installed-m68k-as")
+    asm = tmp_path / "x.s"
+    asm.write_text("\t.org 0\n\tnop\n")
+    with pytest.raises(build_mod.ToolchainMissing, match="pure Python"):
+        build_mod.assemble(asm, tmp_path / "out.bin")
+
+
 def test_verify_reports_exact_match():
     report = build_mod.verify(b"abcd", b"abcd")
     assert report.exact_match

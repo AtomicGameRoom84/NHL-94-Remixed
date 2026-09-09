@@ -26,6 +26,33 @@ class AssembleError(RuntimeError):
     pass
 
 
+class ToolchainMissing(AssembleError):
+    """The GNU m68k binutils aren't installed.
+
+    Only the assembly-backed commands need them (`build`, `verify`, and
+    edits written as `asm` rather than `bytes`); everything else in the
+    toolkit is pure Python. Worth saying so explicitly, because the bare
+    FileNotFoundError this replaces gives no hint that most of the
+    toolkit still works without them.
+    """
+
+
+def _run(cmd: list[str]) -> subprocess.CompletedProcess:
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True)
+    except FileNotFoundError:
+        raise ToolchainMissing(
+            f"{cmd[0]} not found. Install the GNU m68k binutils to assemble:\n"
+            f"  Debian/Ubuntu : apt install binutils-m68k-linux-gnu\n"
+            f"  macOS         : brew install m68k-elf-binutils (then set "
+            f"genesis_toolkit.build.AS/OBJCOPY/NM)\n"
+            f"  Windows       : use WSL, or MSYS2\n"
+            f"Only 'build', 'verify' and \"asm\" patch edits need this -- "
+            f"header/vectors/disasm/consts/map-*/patch-with-bytes/ips-* and "
+            f"fix-checksum are pure Python and work without it."
+        ) from None
+
+
 def _undefined_symbols(obj_path: Path) -> list[str]:
     """Names the object file references but never defines.
 
@@ -36,8 +63,7 @@ def _undefined_symbols(obj_path: Path) -> list[str]:
     references a label it forgot to define would therefore produce a
     quietly corrupt ROM, so check for it explicitly.
     """
-    proc = subprocess.run([NM, "--undefined-only", str(obj_path)],
-                          capture_output=True, text=True)
+    proc = _run([NM, "--undefined-only", str(obj_path)])
     if proc.returncode != 0:
         return []
     return [line.split()[-1] for line in proc.stdout.splitlines() if line.strip()]
@@ -46,11 +72,8 @@ def _undefined_symbols(obj_path: Path) -> list[str]:
 def assemble(asm_path: Path, out_bin: Path) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         obj_path = Path(tmp) / "out.o"
-        proc = subprocess.run(
-            [AS, "-march=68000", "--register-prefix-optional",
-             "-o", str(obj_path), str(asm_path)],
-            capture_output=True, text=True,
-        )
+        proc = _run([AS, "-march=68000", "--register-prefix-optional",
+                     "-o", str(obj_path), str(asm_path)])
         if proc.returncode != 0:
             raise AssembleError(proc.stdout + proc.stderr)
 
@@ -64,10 +87,7 @@ def assemble(asm_path: Path, out_bin: Path) -> None:
                 f"assembled as zeros."
             )
 
-        proc = subprocess.run(
-            [OBJCOPY, "-O", "binary", str(obj_path), str(out_bin)],
-            capture_output=True, text=True,
-        )
+        proc = _run([OBJCOPY, "-O", "binary", str(obj_path), str(out_bin)])
         if proc.returncode != 0:
             raise AssembleError(proc.stdout + proc.stderr)
 
