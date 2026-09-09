@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "genesis-toolkit"
+version = "0.1.0"
+description = "Generic disassembly/reassembly toolkit for Sega Genesis / Mega Drive ROMs"
+requires-python = ">=3.10"
+dependencies = ["capstone>=5.0"]
+
+[project.scripts]
+genesis-toolkit = "genesis_toolkit.cli:main"
+
+[tool.setuptools]
+packages = ["genesis_toolkit"]
