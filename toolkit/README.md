@@ -90,6 +90,50 @@ genesis-toolkit ips-apply  orig.md mod.ips  modded.md   # someone else applies i
 Then load `modded.md` in any emulator (BlastEm, Genesis Plus GX,
 Exodus, a RetroArch core) or flash it to a cart.
 
+### Data maps: editing by name instead of by offset
+
+A *data map* gives names, addresses and types to interesting bytes in a
+game -- the machine-readable form of the ROM maps romhacking
+communities have always traded. `maps/nhl94-ue.json` ships one for NHL
+'94, covering all 28 team headers, derived from the ROM and verified
+against it.
+
+```
+genesis-toolkit map-list rom.md maps/nhl94-ue.json --filter TOR
+genesis-toolkit map-set  rom.md maps/nhl94-ue.json mymod.json \
+    --set "team.TOR.nickname=Blue Jays"
+genesis-toolkit patch    rom.md mymod.json modded.md
+```
+
+A map holds *addresses*, never the values found there, so it describes
+layout rather than copying the game's content. It records the SHA-256 of
+the ROM it was derived from and warns when read against a different one,
+since an address that's right for one dump is meaningless in another.
+Generated mods get their `expect` guards filled in automatically, so
+they're safe by construction.
+
+Writing a string writes the text and its terminator *only*, never
+padding out the rest of the slot: trailing bytes in these slots are
+structural (NHL '94 stores strings as `[size byte][text][NUL][pad]`, so
+the bytes after one string include the size prefix of the next), and
+blanking them would corrupt the record even though the text looked fine.
+
+### Finding a value to edit
+
+For anything not yet mapped -- a speed constant, a scoring rule -- the
+workflow is:
+
+1. Find the value live in an emulator's RAM search while playing.
+2. Break on writes to that RAM address to find the code that sets it.
+3. `genesis-toolkit consts rom.md 5 --mnemonic cmp` lists every
+   instruction using that immediate, to cross-reference against the
+   address your breakpoint found.
+4. Add it to a data map, and it's a named field from then on.
+
+`consts` only searches code the disassembler has reached, so it finds
+candidates rather than answers -- confirm with a breakpoint before
+editing.
+
 Three things the patcher does so an edit can't quietly go wrong:
 
 - **`expect` guards.** An edit records the bytes it assumes are already

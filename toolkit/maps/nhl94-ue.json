@@ -1,0 +1,679 @@
+{
+  "game": "NHL Hockey '94 (USA, Europe)",
+  "rom_sha256": "ccc0298c118d580863c877abd470c71186ef0a1b60f1e7c6ff1e5a38f48fd053",
+  "notes": "Team headers, derived from this ROM and verified against it. Strings are stored as [size byte][text][NUL][pad to even]; the size byte covers the whole field. 'at' points at the text, 'size' is the capacity for text plus terminator. The size byte is never rewritten, so a name must fit its existing slot.",
+  "fields": [
+    {
+      "name": "team.ASE.city",
+      "at": "0x000646",
+      "type": "str",
+      "size": 15
+    },
+    {
+      "name": "team.ASE.abbr",
+      "at": "0x000656",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.ASE.nickname",
+      "at": "0x00065c",
+      "type": "str",
+      "size": 1
+    },
+    {
+      "name": "team.ASE.arena",
+      "at": "0x00065e",
+      "type": "str",
+      "size": 23
+    },
+    {
+      "name": "team.ASW.city",
+      "at": "0x000938",
+      "type": "str",
+      "size": 15
+    },
+    {
+      "name": "team.ASW.abbr",
+      "at": "0x000948",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.ASW.nickname",
+      "at": "0x00094e",
+      "type": "str",
+      "size": 1
+    },
+    {
+      "name": "team.ASW.arena",
+      "at": "0x000950",
+      "type": "str",
+      "size": 23
+    },
+    {
+      "name": "team.BOS.city",
+      "at": "0x000c28",
+      "type": "str",
+      "size": 7
+    },
+    {
+      "name": "team.BOS.abbr",
+      "at": "0x000c30",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.BOS.nickname",
+      "at": "0x000c36",
+      "type": "str",
+      "size": 7
+    },
+    {
+      "name": "team.BOS.arena",
+      "at": "0x000c3e",
+      "type": "str",
+      "size": 15
+    },
+    {
+      "name": "team.BUF.city",
+      "at": "0x000f0e",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.BUF.abbr",
+      "at": "0x000f18",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.BUF.nickname",
+      "at": "0x000f1e",
+      "type": "str",
+      "size": 7
+    },
+    {
+      "name": "team.BUF.arena",
+      "at": "0x000f26",
+      "type": "str",
+      "size": 21
+    },
+    {
+      "name": "team.CGY.city",
+      "at": "0x00120a",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.CGY.abbr",
+      "at": "0x001214",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.CGY.nickname",
+      "at": "0x00121a",
+      "type": "str",
+      "size": 7
+    },
+    {
+      "name": "team.CGY.arena",
+      "at": "0x001222",
+      "type": "str",
+      "size": 19
+    },
+    {
+      "name": "team.CHI.city",
+      "at": "0x001502",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.CHI.abbr",
+      "at": "0x00150c",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.CHI.nickname",
+      "at": "0x001512",
+      "type": "str",
+      "size": 11
+    },
+    {
+      "name": "team.CHI.arena",
+      "at": "0x00151e",
+      "type": "str",
+      "size": 17
+    },
+    {
+      "name": "team.DET.city",
+      "at": "0x001816",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.DET.abbr",
+      "at": "0x001820",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.DET.nickname",
+      "at": "0x001826",
+      "type": "str",
+      "size": 11
+    },
+    {
+      "name": "team.DET.arena",
+      "at": "0x001832",
+      "type": "str",
+      "size": 23
+    },
+    {
+      "name": "team.EDM.city",
+      "at": "0x001b18",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.EDM.abbr",
+      "at": "0x001b22",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.EDM.nickname",
+      "at": "0x001b28",
+      "type": "str",
+      "size": 7
+    },
+    {
+      "name": "team.EDM.arena",
+      "at": "0x001b30",
+      "type": "str",
+      "size": 21
+    },
+    {
+      "name": "team.HFD.city",
+      "at": "0x001e22",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.HFD.abbr",
+      "at": "0x001e2c",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.HFD.nickname",
+      "at": "0x001e32",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.HFD.arena",
+      "at": "0x001e3c",
+      "type": "str",
+      "size": 23
+    },
+    {
+      "name": "team.LA.city",
+      "at": "0x002120",
+      "type": "str",
+      "size": 13
+    },
+    {
+      "name": "team.LA.abbr",
+      "at": "0x00212e",
+      "type": "str",
+      "size": 3
+    },
+    {
+      "name": "team.LA.nickname",
+      "at": "0x002132",
+      "type": "str",
+      "size": 7
+    },
+    {
+      "name": "team.LA.arena",
+      "at": "0x00213a",
+      "type": "str",
+      "size": 21
+    },
+    {
+      "name": "team.DAL.city",
+      "at": "0x00241a",
+      "type": "str",
+      "size": 7
+    },
+    {
+      "name": "team.DAL.abbr",
+      "at": "0x002422",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.DAL.nickname",
+      "at": "0x002428",
+      "type": "str",
+      "size": 7
+    },
+    {
+      "name": "team.DAL.arena",
+      "at": "0x002430",
+      "type": "str",
+      "size": 15
+    },
+    {
+      "name": "team.MTL.city",
+      "at": "0x002716",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.MTL.abbr",
+      "at": "0x002720",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.MTL.nickname",
+      "at": "0x002726",
+      "type": "str",
+      "size": 11
+    },
+    {
+      "name": "team.MTL.arena",
+      "at": "0x002732",
+      "type": "str",
+      "size": 15
+    },
+    {
+      "name": "team.NJ.city",
+      "at": "0x002a14",
+      "type": "str",
+      "size": 31
+    },
+    {
+      "name": "team.NJ.abbr",
+      "at": "0x002a34",
+      "type": "str",
+      "size": 3
+    },
+    {
+      "name": "team.NJ.nickname",
+      "at": "0x002a38",
+      "type": "str",
+      "size": 7
+    },
+    {
+      "name": "team.NJ.arena",
+      "at": "0x002a40",
+      "type": "str",
+      "size": 25
+    },
+    {
+      "name": "team.NYI.city",
+      "at": "0x002d30",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.NYI.abbr",
+      "at": "0x002d3a",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.NYI.nickname",
+      "at": "0x002d40",
+      "type": "str",
+      "size": 11
+    },
+    {
+      "name": "team.NYI.arena",
+      "at": "0x002d4c",
+      "type": "str",
+      "size": 17
+    },
+    {
+      "name": "team.NYR.city",
+      "at": "0x003024",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.NYR.abbr",
+      "at": "0x00302e",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.NYR.nickname",
+      "at": "0x003034",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.NYR.arena",
+      "at": "0x00303e",
+      "type": "str",
+      "size": 23
+    },
+    {
+      "name": "team.OTW.city",
+      "at": "0x00331c",
+      "type": "str",
+      "size": 7
+    },
+    {
+      "name": "team.OTW.abbr",
+      "at": "0x003324",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.OTW.nickname",
+      "at": "0x00332a",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.OTW.arena",
+      "at": "0x003334",
+      "type": "str",
+      "size": 21
+    },
+    {
+      "name": "team.PHI.city",
+      "at": "0x003610",
+      "type": "str",
+      "size": 31
+    },
+    {
+      "name": "team.PHI.abbr",
+      "at": "0x003630",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.PHI.nickname",
+      "at": "0x003636",
+      "type": "str",
+      "size": 7
+    },
+    {
+      "name": "team.PHI.arena",
+      "at": "0x00363e",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.PIT.city",
+      "at": "0x003900",
+      "type": "str",
+      "size": 31
+    },
+    {
+      "name": "team.PIT.abbr",
+      "at": "0x003920",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.PIT.nickname",
+      "at": "0x003926",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.PIT.arena",
+      "at": "0x003930",
+      "type": "str",
+      "size": 13
+    },
+    {
+      "name": "team.QUE.city",
+      "at": "0x003c16",
+      "type": "str",
+      "size": 7
+    },
+    {
+      "name": "team.QUE.abbr",
+      "at": "0x003c1e",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.QUE.nickname",
+      "at": "0x003c24",
+      "type": "str",
+      "size": 11
+    },
+    {
+      "name": "team.QUE.arena",
+      "at": "0x003c30",
+      "type": "str",
+      "size": 19
+    },
+    {
+      "name": "team.SJ.city",
+      "at": "0x003f0c",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.SJ.abbr",
+      "at": "0x003f16",
+      "type": "str",
+      "size": 3
+    },
+    {
+      "name": "team.SJ.nickname",
+      "at": "0x003f1a",
+      "type": "str",
+      "size": 7
+    },
+    {
+      "name": "team.SJ.arena",
+      "at": "0x003f22",
+      "type": "str",
+      "size": 15
+    },
+    {
+      "name": "team.STL.city",
+      "at": "0x0041ec",
+      "type": "str",
+      "size": 11
+    },
+    {
+      "name": "team.STL.abbr",
+      "at": "0x0041f8",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.STL.nickname",
+      "at": "0x0041fe",
+      "type": "str",
+      "size": 7
+    },
+    {
+      "name": "team.STL.arena",
+      "at": "0x004206",
+      "type": "str",
+      "size": 17
+    },
+    {
+      "name": "team.TB.city",
+      "at": "0x0044e6",
+      "type": "str",
+      "size": 11
+    },
+    {
+      "name": "team.TB.abbr",
+      "at": "0x0044f2",
+      "type": "str",
+      "size": 3
+    },
+    {
+      "name": "team.TB.nickname",
+      "at": "0x0044f6",
+      "type": "str",
+      "size": 11
+    },
+    {
+      "name": "team.TB.arena",
+      "at": "0x004502",
+      "type": "str",
+      "size": 23
+    },
+    {
+      "name": "team.TOR.city",
+      "at": "0x0047ec",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.TOR.abbr",
+      "at": "0x0047f6",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.TOR.nickname",
+      "at": "0x0047fc",
+      "type": "str",
+      "size": 13
+    },
+    {
+      "name": "team.TOR.arena",
+      "at": "0x00480a",
+      "type": "str",
+      "size": 19
+    },
+    {
+      "name": "team.VAN.city",
+      "at": "0x004ade",
+      "type": "str",
+      "size": 11
+    },
+    {
+      "name": "team.VAN.abbr",
+      "at": "0x004aea",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.VAN.nickname",
+      "at": "0x004af0",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.VAN.arena",
+      "at": "0x004afa",
+      "type": "str",
+      "size": 17
+    },
+    {
+      "name": "team.WPG.city",
+      "at": "0x004dd8",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.WPG.abbr",
+      "at": "0x004de2",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.WPG.nickname",
+      "at": "0x004de8",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.WPG.arena",
+      "at": "0x004dee",
+      "type": "str",
+      "size": 15
+    },
+    {
+      "name": "team.WSH.city",
+      "at": "0x0050a8",
+      "type": "str",
+      "size": 31
+    },
+    {
+      "name": "team.WSH.abbr",
+      "at": "0x0050c8",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.WSH.nickname",
+      "at": "0x0050ce",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.WSH.arena",
+      "at": "0x0050d8",
+      "type": "str",
+      "size": 15
+    },
+    {
+      "name": "team.FLA.city",
+      "at": "0x00530a",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.FLA.abbr",
+      "at": "0x005314",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.FLA.nickname",
+      "at": "0x00531a",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.FLA.arena",
+      "at": "0x005324",
+      "type": "str",
+      "size": 13
+    },
+    {
+      "name": "team.ANH.city",
+      "at": "0x005554",
+      "type": "str",
+      "size": 9
+    },
+    {
+      "name": "team.ANH.abbr",
+      "at": "0x00555e",
+      "type": "str",
+      "size": 5
+    },
+    {
+      "name": "team.ANH.nickname",
+      "at": "0x005564",
+      "type": "str",
+      "size": 13
+    },
+    {
+      "name": "team.ANH.arena",
+      "at": "0x005572",
+      "type": "str",
+      "size": 5
+    }
+  ]
+}
