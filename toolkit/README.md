@@ -47,7 +47,14 @@ header/vector/disassembly/reassembly pipeline end to end.
 - `genesis_toolkit/patch.py` -- the mod layer: a mod is a small JSON
   file of edits, not a modified ROM. Applies edits, fixes up the header
   checksum, and reads/writes IPS patches.
-- `genesis_toolkit/cli.py` -- `genesis-toolkit header|vectors|disasm|build|verify|patch|fix-checksum|ips-create|ips-apply`.
+- `genesis_toolkit/datamap.py` -- named fields: give addresses names and
+  types once, then edit by name instead of by offset.
+- `genesis_toolkit/selftest.py` -- runs every guarantee end to end
+  against a real ROM.
+- `genesis_toolkit/cli.py` -- the `genesis-toolkit` command:
+  `header`, `vectors`, `disasm`, `build`, `verify`, `patch`,
+  `fix-checksum`, `ips-create`, `ips-apply`, `map-list`, `map-set`,
+  `consts`, `selftest`.
 
 ## Usage
 
