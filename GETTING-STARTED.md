@@ -44,7 +44,9 @@ Then install:
 pip install -e .
 ```
 
-This pulls in `capstone` (the disassembler engine) automatically.
+This pulls in `capstone` (the disassembler engine) automatically. If you
+also want to run the project's own unit tests, use
+`pip install -e ".[test]"` instead — it adds the test runner.
 
 **Check it worked:**
 

@@ -9,6 +9,12 @@ description = "Generic disassembly/reassembly toolkit for Sega Genesis / Mega Dr
 requires-python = ">=3.10"
 dependencies = ["capstone>=5.0"]
 
+[project.optional-dependencies]
+# `pip install -e ".[test]"` to get the test runner too. Without this a
+# clean install has no pytest, and the documented `python -m pytest`
+# fails with "No module named pytest" on a fresh checkout.
+test = ["pytest>=7"]
+
 [project.scripts]
 genesis-toolkit = "genesis_toolkit.cli:main"
 

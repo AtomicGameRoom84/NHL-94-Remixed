@@ -182,7 +182,8 @@ byte-exact disassemble/reassemble round-trip, patch application and
 map, and that the original file is untouched afterwards. Exits non-zero
 on failure. It cannot prove a ROM boots; that needs an emulator.
 
-Run the unit tests with `python -m pytest` from this directory (requires
+Run the unit tests with `pip install -e ".[test]"` then `python -m pytest`
+from this directory (the round-trip tests additionally require
 `m68k-linux-gnu-as`/`objcopy`, e.g. `apt install binutils-m68k-linux-gnu`,
 for the round-trip tests -- they're skipped automatically if that's not
 installed).

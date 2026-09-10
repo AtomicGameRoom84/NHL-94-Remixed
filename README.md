@@ -56,6 +56,7 @@ explicitly rather than failing obscurely when they're absent.
 
 ```
 cd toolkit
+pip install -e ".[test]"                             # adds the test runner
 python -m pytest                                     # 62 tests, no ROM needed
 genesis-toolkit selftest "your rom.md" --map maps/nhl94-ue.json
 ```
