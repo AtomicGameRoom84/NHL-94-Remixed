@@ -95,6 +95,12 @@ def run(rom_path: Path, map_path: Path | None = None,
         except build_mod.ToolchainMissing:
             out.record(SKIP, "reassembles byte-exact",
                        "GNU m68k binutils not installed")
+        except build_mod.AssembleError as e:
+            # Catch this here rather than letting it reach the outer
+            # handler, which would blame "disassembles" -- a step that
+            # already passed and got its own row -- and leave the
+            # reassembly result unreported entirely.
+            out.record(FAIL, "reassembles byte-exact", str(e).strip().splitlines()[0])
         finally:
             for p in (workdir / "selftest.s", workdir / "selftest.bin",
                       workdir / "selftest.verify.bin"):

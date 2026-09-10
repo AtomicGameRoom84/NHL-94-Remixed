@@ -56,7 +56,7 @@ explicitly rather than failing obscurely when they're absent.
 
 ```
 cd toolkit
-python -m pytest                                     # 61 tests, no ROM needed
+python -m pytest                                     # 62 tests, no ROM needed
 genesis-toolkit selftest "your rom.md" --map maps/nhl94-ue.json
 ```
 
@@ -79,7 +79,7 @@ you see it.
 |---|---|
 | `toolkit/genesis_toolkit/` | the library and `genesis-toolkit` CLI |
 | `toolkit/maps/nhl94-ue.json` | data map: all 28 NHL '94 team headers |
-| `toolkit/tests/` | 61 tests, incl. a synthetic non-copyrighted fixture ROM |
+| `toolkit/tests/` | 62 tests, incl. a synthetic non-copyrighted fixture ROM |
 
 Capabilities, in rough order of how you'd meet them:
 

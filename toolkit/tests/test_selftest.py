@@ -59,6 +59,24 @@ def test_map_pointing_off_the_end_is_caught(tmp_path: Path):
     assert _status(result, "every mapped field reads") == selftest.FAIL
 
 
+def test_assembly_failure_is_blamed_on_reassembly_not_disassembly(tmp_path: Path):
+    # A failure here must not surface as a second "disassembles" row
+    # contradicting the PASS one, nor silently drop the reassembly row.
+    from unittest.mock import patch as mock_patch
+
+    from genesis_toolkit import build as build_mod
+
+    rom = _write_rom(tmp_path, build_fixture_rom())
+    with mock_patch.object(build_mod, "assemble_and_reconcile",
+                           side_effect=build_mod.AssembleError("boom")):
+        result = selftest.run(rom, workdir=tmp_path)
+
+    names = [name for _, name, _ in result.checks]
+    assert names.count("disassembles") == 1
+    assert _status(result, "disassembles") == selftest.PASS
+    assert _status(result, "reassembles byte-exact") == selftest.FAIL
+
+
 def test_scratch_files_are_cleaned_up(tmp_path: Path):
     selftest.run(_write_rom(tmp_path, build_fixture_rom()), workdir=tmp_path)
     leftovers = [p.name for p in tmp_path.iterdir() if p.name.startswith("selftest")]
