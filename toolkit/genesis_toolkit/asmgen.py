@@ -254,6 +254,12 @@ def emit_asm(spans, entry_points: list[tuple[str, int]], rom_len: int) -> str:
             if _unresolvable_pcrel(span, labels):
                 lines.append(raw_line(span, "unbindable PC-relative target"))
                 continue
+            if "invalid" in span.op_str:
+                # capstone couldn't name an operand. Passing the word
+                # through would make GAS read it as a symbol, and an
+                # undefined symbol assembles to zeros.
+                lines.append(raw_line(span, "operand capstone could not name"))
+                continue
             op = _rewrite_operands(span, labels)
             mnemonic = _normalize_mnemonic(span.mnemonic)
             text = f"\t{mnemonic}\t{op}".rstrip()

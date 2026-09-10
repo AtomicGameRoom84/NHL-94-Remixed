@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -18,6 +19,7 @@ from . import build as build_mod
 from . import datamap as datamap_mod
 from . import header as header_mod
 from . import patch as patch_mod
+from . import tables as tables_mod
 from . import vectors as vectors_mod
 from .disasm import linear_map, recursive_descent
 from .asmgen import emit_asm
@@ -69,12 +71,17 @@ def cmd_vectors(args: argparse.Namespace) -> int:
     return 0
 
 
-def _disassemble(rom: bytes):
-    entry_points = [("reset", int.from_bytes(rom[4:8], "big"))]
-    entry_points += [
-        (name, addr) for name, addr in vectors_mod.code_entry_points(rom)
-        if name != "reset_pc"
-    ]
+def _seed_points(rom: bytes):
+    seeds = [("reset", int.from_bytes(rom[4:8], "big"))]
+    seeds += [(name, addr) for name, addr in vectors_mod.code_entry_points(rom)
+              if name != "reset_pc"]
+    return seeds
+
+
+def _disassemble(rom: bytes, discover: bool = False, infer: bool = False):
+    entry_points = _seed_points(rom)
+    if discover:
+        entry_points = tables_mod.discover(rom, entry_points, infer=infer).entry_points
     result = recursive_descent(rom, entry_points)
     spans = linear_map(result, rom)
     return entry_points, result, spans
@@ -82,7 +89,8 @@ def _disassemble(rom: bytes):
 
 def cmd_disasm(args: argparse.Namespace) -> int:
     rom = _load(args.rom)
-    entry_points, result, spans = _disassemble(rom)
+    entry_points, result, spans = _disassemble(
+        rom, discover=args.discover, infer=args.infer)
     asm_text = emit_asm(spans, entry_points, len(rom))
     Path(args.out).write_text(asm_text)
 
@@ -286,6 +294,44 @@ def cmd_consts(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_discover(args: argparse.Namespace) -> int:
+    """Find routines reached through dispatch tables, not just branches."""
+    rom = _load(args.rom)
+    seeds = _seed_points(rom)
+    found = tables_mod.discover(rom, seeds, infer=args.infer)
+
+    base = recursive_descent(rom, seeds)
+    base_bytes = sum(i.size for i in base.instructions.values())
+    full = recursive_descent(rom, found.entry_points)
+    full_bytes = sum(i.size for i in full.instructions.values())
+
+    print(f"Seeds from the vector table : {len(seeds)}")
+    print(f"Dispatch tables found       : {len(found.tables)} "
+          f"(in {found.rounds} round(s))")
+    print(f"Routine addresses in them   : {found.discovered}")
+    print(f"Reachable code, seeds only  : {base_bytes:>8,} bytes "
+          f"({100 * base_bytes / len(rom):.2f}% of ROM)")
+    print(f"Reachable code, with tables : {full_bytes:>8,} bytes "
+          f"({100 * full_bytes / len(rom):.2f}% of ROM)")
+
+    if args.out:
+        doc = {
+            "rom_sha256": hashlib.sha256(rom).hexdigest(),
+            "note": ("Entry points for this ROM. Every table listed was named "
+                     "by an instruction operand unless --infer was used, in "
+                     "which case some were guessed from runs of plausible "
+                     "pointers and are not evidence."),
+            "inferred_tables_included": bool(args.infer),
+            "entry_points": [{"name": n, "at": f"0x{a:06x}"}
+                             for n, a in found.entry_points],
+            "tables": [{"at": f"0x{b:06x}", "entries": len(e)}
+                       for b, e in sorted(found.tables.items())],
+        }
+        Path(args.out).write_text(json.dumps(doc, indent=2) + "\n")
+        print(f"Wrote                       : {args.out}")
+    return 0
+
+
 def cmd_selftest(args: argparse.Namespace) -> int:
     from . import selftest as selftest_mod
     _load(args.rom)   # same friendly path errors as every other command
@@ -324,6 +370,11 @@ def main(argv=None) -> int:
     p = sub.add_parser("disasm", help="recursive-descent disassemble a ROM to .s")
     p.add_argument("rom")
     p.add_argument("out")
+    p.add_argument("--discover", action="store_true",
+                   help="also follow dispatch tables (finds far more code)")
+    p.add_argument("--infer", action="store_true",
+                   help="with --discover, also guess at tables no instruction "
+                        "names (finds more code, misreads more data as code)")
     p.set_defaults(func=cmd_disasm)
 
     p = sub.add_parser("build", help="assemble a .s file to a raw binary")
@@ -383,6 +434,14 @@ def main(argv=None) -> int:
     p.add_argument("--workdir", help="where to put scratch files (default: "
                                      "alongside the ROM)")
     p.set_defaults(func=cmd_selftest)
+
+    p = sub.add_parser("discover", help="find routines reached through dispatch tables")
+    p.add_argument("rom")
+    p.add_argument("--out", help="write the entry points and tables to JSON")
+    p.add_argument("--infer", action="store_true",
+                   help="also guess at tables no instruction names (finds more "
+                        "code, but misreads more data as code)")
+    p.set_defaults(func=cmd_discover)
 
     p = sub.add_parser("consts", help="find code referencing an immediate value")
     p.add_argument("rom")

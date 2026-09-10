@@ -135,6 +135,15 @@ def recursive_descent(rom: bytes, entry_points: list[tuple[str, int]]) -> Disasm
                 result.decode_failures.append(cur)
                 break
 
+            # capstone also signals "these bytes aren't really this
+            # instruction" by printing an operand it can't name as the
+            # literal text `invalid` -- an index register that doesn't
+            # exist, for example. That is data being read as code, so the
+            # path ends here rather than marching on through a blob.
+            if "invalid" in insn.op_str:
+                result.decode_failures.append(cur)
+                break
+
             if cur in result.instructions:
                 break
             result.instructions[cur] = Instruction(

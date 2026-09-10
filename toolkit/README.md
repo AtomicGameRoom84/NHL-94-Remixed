@@ -49,12 +49,15 @@ header/vector/disassembly/reassembly pipeline end to end.
   checksum, and reads/writes IPS patches.
 - `genesis_toolkit/datamap.py` -- named fields: give addresses names and
   types once, then edit by name instead of by offset.
+- `genesis_toolkit/tables.py` -- dispatch-table discovery: finds the
+  routines that are only ever reached through a jump table, which plain
+  control-flow following can never see.
 - `genesis_toolkit/selftest.py` -- runs every guarantee end to end
   against a real ROM.
 - `genesis_toolkit/cli.py` -- the `genesis-toolkit` command:
   `header`, `vectors`, `disasm`, `build`, `verify`, `patch`,
   `fix-checksum`, `ips-create`, `ips-apply`, `map-list`, `map-set`,
-  `consts`, `selftest`.
+  `consts`, `discover`, `selftest`.
 
 ## Usage
 
@@ -139,7 +142,53 @@ workflow is:
 
 `consts` only searches code the disassembler has reached, so it finds
 candidates rather than answers -- confirm with a breakpoint before
-editing.
+editing. `disasm --discover` widens that search area (see below).
+
+### Reaching code that branches alone never find
+
+Following branches and direct calls from the vector table reaches about
+**4.6%** of NHL '94. That is not a bug in the walk -- the other 95% is
+mostly graphics, audio and team data, and the code that *is* missing is
+missing because the game reaches it through a dispatch table: a state
+number indexes an array, and the game jumps to whatever it finds there.
+No operand in the instruction stream names those routines.
+
+`discover` finds the tables. NHL '94 never uses the textbook
+`jmp $1234(pc,d0.w)` form; it loads a base address into a register and
+jumps through that, in two shapes that store their entries differently:
+
+```
+movea.l #$18d7c, a0          lea      $117b2(pc), a2
+movea.l (a0,d1.w), a0        move.w   (a2,d0.w), d0
+jsr     (a0)                 jsr      (a2,d0.w)
+
+absolute longword addresses  signed 16-bit offsets from the base
+```
+
+Both name the base outright, so both are evidence rather than guesswork.
+Which of the two it is comes from the *reader* instruction's size
+suffix, because reading one kind as the other yields nonsense.
+
+```
+genesis-toolkit discover rom.md                 # report what it finds
+genesis-toolkit disasm rom.md out.s --discover  # use it in a disassembly
+```
+
+On NHL '94 this takes reachable code from 4.63% to **6.56%**, and the
+reassembled ROM is still byte-identical to the original.
+
+**What it deliberately does not do.** Six dispatch sites in NHL '94 load
+their pointer from RAM (`movea.l $cf24.w,a0`), from a memory chain, or
+off the stack. Those destinations exist only at runtime, so `discover`
+reports nothing for them rather than inventing a base address -- guessing
+there is how a disassembler ends up decoding a graphics blob as code.
+
+`--infer` additionally guesses at tables no instruction names, by
+scanning for runs of longwords that all look like code pointers. It
+reaches about 8.9% on NHL '94, but the share of instructions the
+translator has to fall back to raw bytes for -- a good proxy for "this
+was actually data" -- rises about sevenfold, from 0.28% to 1.93%. It is
+off by default for that reason. Use it to explore, not to trust.
 
 Three things the patcher does so an edit can't quietly go wrong:
 
