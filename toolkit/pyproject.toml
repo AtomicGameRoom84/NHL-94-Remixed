@@ -18,5 +18,8 @@ test = ["pytest>=7"]
 [project.scripts]
 genesis-toolkit = "genesis_toolkit.cli:main"
 
+[project.gui-scripts]
+rink-editor = "genesis_toolkit.gui:main"
+
 [tool.setuptools]
 packages = ["genesis_toolkit"]

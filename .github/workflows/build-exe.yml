@@ -37,13 +37,25 @@ jobs:
         run: python -m pytest -q
         working-directory: toolkit
 
-      - name: Build genesis-toolkit.exe
+      - name: Build genesis-toolkit.exe (command line)
         run: |
           pyinstaller --onefile --name genesis-toolkit `
             --paths . `
             --hidden-import genesis_toolkit.selftest `
             --collect-all capstone `
             packaging/entry.py
+        working-directory: toolkit
+
+      - name: Build RinkEditor.exe (the window)
+        # --windowed: no console box behind the GUI. The data map is
+        # bundled inside the exe so the editor works from any folder,
+        # with no loose files to lose.
+        run: |
+          pyinstaller --onefile --windowed --name RinkEditor `
+            --paths . `
+            --collect-all capstone `
+            --add-data "maps;maps" `
+            packaging/gui_entry.py
         working-directory: toolkit
 
       - name: Smoke-test the exe
@@ -61,9 +73,19 @@ jobs:
           Remove-Item ci-fixture.md
         working-directory: toolkit
 
+      - name: Check the editor exe starts and finds its data map
+        # A GUI can't be clicked in CI, but it can be imported and asked
+        # whether the bundled map resolved -- the one thing that breaks
+        # when data files don't make it into a frozen build.
+        run: |
+          python -c "from genesis_toolkit.gui import _default_map_path; p=_default_map_path(); print('map:', p); assert p, 'data map not found'"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+        working-directory: toolkit
+
       - name: Assemble the release bundle
         run: |
           New-Item -ItemType Directory -Force -Path bundle | Out-Null
+          Copy-Item toolkit\dist\RinkEditor.exe bundle\
           Copy-Item toolkit\dist\genesis-toolkit.exe bundle\
           Copy-Item -Recurse toolkit\maps bundle\maps
           Copy-Item GETTING-STARTED.md bundle\

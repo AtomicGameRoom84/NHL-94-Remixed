@@ -146,3 +146,14 @@ def test_parse_assignment():
     assert dm.parse_assignment("a.b = 5") == ("a.b", "5")
     with pytest.raises(patch_mod.PatchError):
         dm.parse_assignment("nope")
+
+
+def test_value_filling_its_slot_stops_at_the_next_record(tmp_path: Path):
+    # A string that exactly fills its slot has no terminator, so the
+    # following record's bytes sit against it. Reading those in makes an
+    # untouched field look edited once a text widget normalises them.
+    rom = bytearray(build_fixture_rom())
+    rom[0x600:0x606] = b"Pond\x02\x01"
+    path = _write_map(tmp_path, [
+        {"name": "arena", "at": "0x600", "type": "str", "size": 6}])
+    assert dm.read_field(bytes(rom), dm.load_map(path).get("arena")) == "Pond"

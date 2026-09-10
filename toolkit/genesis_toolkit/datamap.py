@@ -142,7 +142,16 @@ def read_field(rom: bytes, field: Field):
         # cartridge header space-pads its fields, while in-game string
         # tables NUL-terminate. Handle both so a map can describe
         # either without the caller caring which.
-        return raw.split(b"\x00")[0].decode("latin1").rstrip()
+        #
+        # Stop at the first control byte as well, not just NUL. A string
+        # that exactly fills its slot has no terminator, so the next
+        # record's bytes sit right against it -- and a value carrying a
+        # stray control character round-trips badly through anything
+        # that normalises text (a GUI entry box drops it, then reports
+        # an untouched field as edited).
+        text = raw.split(b"\x00")[0]
+        cut = next((i for i, b in enumerate(text) if b < 0x20), len(text))
+        return text[:cut].decode("latin1").rstrip()
     return int.from_bytes(raw, "big")
 
 
