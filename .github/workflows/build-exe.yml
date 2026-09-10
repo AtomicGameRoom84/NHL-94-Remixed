@@ -1,0 +1,77 @@
+name: Build Windows exe
+
+# A Windows .exe has to be built on Windows -- PyInstaller doesn't
+# cross-compile -- so this runs on GitHub's Windows machines and leaves
+# a downloadable zip behind. That lets someone use the toolkit with no
+# Python installed at all.
+on:
+  workflow_dispatch:        # "Run workflow" button in the Actions tab
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: write           # needed only to attach the zip to a release
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install the toolkit and PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install ./toolkit
+          pip install pyinstaller
+
+      - name: Run the tests before packaging anything
+        run: |
+          pip install ./toolkit[test]
+          python -m pytest -q
+        working-directory: toolkit
+
+      - name: Build genesis-toolkit.exe
+        run: |
+          pyinstaller --onefile --name genesis-toolkit `
+            --paths . `
+            --hidden-import genesis_toolkit.selftest `
+            --collect-all capstone `
+            packaging/entry.py
+        working-directory: toolkit
+
+      - name: Smoke-test the exe
+        # A binary that builds but can't disassemble is worse than no
+        # binary, and capstone's native library is the part most likely
+        # to go missing in a frozen build -- so exercise it, don't just
+        # check the file exists.
+        run: |
+          .\dist\genesis-toolkit.exe --help
+          .\dist\genesis-toolkit.exe map-list --help
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+        working-directory: toolkit
+
+      - name: Assemble the release bundle
+        run: |
+          New-Item -ItemType Directory -Force -Path bundle | Out-Null
+          Copy-Item toolkit\dist\genesis-toolkit.exe bundle\
+          Copy-Item -Recurse toolkit\maps bundle\maps
+          Copy-Item GETTING-STARTED.md bundle\
+          Copy-Item README.md bundle\
+          Compress-Archive -Path bundle\* -DestinationPath genesis-toolkit-windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: genesis-toolkit-windows
+          path: genesis-toolkit-windows.zip
+          retention-days: 90
+
+      - name: Attach to the release when a tag was pushed
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: genesis-toolkit-windows.zip

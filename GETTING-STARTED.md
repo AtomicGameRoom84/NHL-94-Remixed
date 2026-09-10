@@ -8,6 +8,24 @@ one.
 
 ---
 
+## Prefer a .exe? (no Python at all)
+
+There's a prebuilt Windows executable — skip Steps 0 and 1 entirely:
+
+1. Go to the repo's **Actions** tab → **Build Windows exe** → the newest
+   run → download **genesis-toolkit-windows** at the bottom.
+2. Unzip it. You get `genesis-toolkit.exe`, a `maps` folder, and these docs.
+3. Put your ROM next to the exe and continue from **Step 2**, using
+   `genesis-toolkit.exe` wherever the guide says `genesis-toolkit`.
+
+If no run is listed yet, click **Run workflow** on that page — it takes
+a couple of minutes.
+
+The exe covers everything in this guide. Only `build` and `verify` fall
+outside it, since those need an assembler that can't be bundled.
+
+---
+
 ## Step 0 — Install Python
 
 The toolkit needs **Python 3.10 or newer**. Check what you have by
@@ -30,13 +48,13 @@ installer. Then close and reopen Command Prompt.
 If you have Git:
 
 ```
-git clone -b claude/game-decompilation-0kkuru https://github.com/AtomicGameRoom84/NHL-94-Remixed
+git clone https://github.com/AtomicGameRoom84/NHL-94-Remixed
 cd NHL-94-Remixed\toolkit
 ```
 
-If you don't: open the repository on GitHub, switch to the
-`claude/game-decompilation-0kkuru` branch, **Code → Download ZIP**,
-unzip it, and `cd` into the `toolkit` folder inside.
+If you don't: open the repository on GitHub, click the green
+**Code → Download ZIP**, unzip it, and `cd` into the `toolkit` folder
+inside.
 
 Then install:
 

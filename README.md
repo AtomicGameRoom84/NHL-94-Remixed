@@ -31,6 +31,12 @@ never needs to be committed — which is also why you won't find it here.
 
 ## Quick start
 
+**Want a .exe instead of Python?** The **Actions** tab → *Build Windows
+exe* → newest run → download `genesis-toolkit-windows`. It's a single
+standalone executable plus the data maps; no Python, no install. Built on
+a Windows runner because PyInstaller can't cross-compile, and smoke-tested
+in CI before it's published.
+
 ```
 cd toolkit
 pip install -e .
