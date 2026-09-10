@@ -28,12 +28,17 @@ class InputError(Exception):
 
 
 def _load(path: str) -> bytes:
+    target = Path(path)
+    # Ask whether it's a directory rather than inferring it from the
+    # exception: POSIX raises IsADirectoryError, but Windows raises
+    # PermissionError for the same mistake, which would report the
+    # wrong cause on the platform most people run this on.
+    if target.is_dir():
+        raise InputError(f"{path} is a directory, not a file")
     try:
-        return Path(path).read_bytes()
+        return target.read_bytes()
     except FileNotFoundError:
         raise InputError(f"no such file: {path}") from None
-    except IsADirectoryError:
-        raise InputError(f"{path} is a directory, not a file") from None
     except PermissionError:
         raise InputError(f"no permission to read {path}") from None
 
