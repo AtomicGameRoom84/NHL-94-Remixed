@@ -203,3 +203,13 @@ def test_ips_splits_runs_longer_than_a_record():
     modified = b"\xff" * 0x30000
     ips = patch_mod.create_ips(original, modified)
     assert patch_mod.apply_ips(original, ips) == modified
+
+
+@pytest.mark.skipif(not _has_m68k_as(), reason="m68k-linux-gnu-as not installed")
+def test_gas_condition_aliases_are_guarded():
+    # hs/lo are GAS aliases for cc/cs; without them in the guard a
+    # branch written that way assembles to a zero displacement.
+    for src in ("\tbhs.w 0x420", "\tblo.w 0x420", "\tdbhs d0, 0x420"):
+        with pytest.raises(build_mod.AssembleError, match="silently encode"):
+            build_mod.assemble_at(src, 0x400)
+    assert build_mod.assemble_at("\tbhs.w rom+0x420", 0x400) == bytes.fromhex("6400001e")

@@ -260,8 +260,12 @@ def cmd_consts(args: argparse.Namespace) -> int:
     """Find immediate constants in code -- the practical way to hunt
     down a gameplay value once you know what number to look for."""
     rom = _load(args.rom)
+    try:
+        wanted = int(args.value, 0)
+    except ValueError:
+        raise InputError(f"{args.value!r} is not a number "
+                         f"(use decimal, or 0x for hex)") from None
     _, _, spans = _disassemble(rom)
-    wanted = int(args.value, 0)
     pattern = re.compile(r"#\$([0-9A-Fa-f]+)")
 
     hits = 0
@@ -284,6 +288,7 @@ def cmd_consts(args: argparse.Namespace) -> int:
 
 def cmd_selftest(args: argparse.Namespace) -> int:
     from . import selftest as selftest_mod
+    _load(args.rom)   # same friendly path errors as every other command
     result = selftest_mod.run(
         Path(args.rom),
         Path(args.map) if args.map else None,
@@ -394,6 +399,11 @@ def main(argv=None) -> int:
         return args.func(args)
     except InputError as e:
         print(f"error: {e}", file=sys.stderr)
+        return 1
+    except ValueError as e:
+        # The header/vector parsers reject anything too small or
+        # malformed to be a cartridge this way.
+        print(f"error: {e}. Is that actually a Genesis ROM?", file=sys.stderr)
         return 1
     except (patch_mod.PatchError, build_mod.AssembleError) as e:
         print(f"error: {e}", file=sys.stderr)

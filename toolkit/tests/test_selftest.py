@@ -81,3 +81,24 @@ def test_scratch_files_are_cleaned_up(tmp_path: Path):
     selftest.run(_write_rom(tmp_path, build_fixture_rom()), workdir=tmp_path)
     leftovers = [p.name for p in tmp_path.iterdir() if p.name.startswith("selftest")]
     assert leftovers == []
+
+
+def test_does_not_clobber_user_files_next_to_the_rom(tmp_path: Path):
+    # Scratch files used to be written beside the ROM under fixed names
+    # and deleted unconditionally.
+    rom = _write_rom(tmp_path, build_fixture_rom())
+    victim = tmp_path / "selftest.s"
+    victim.write_text("my own work")
+    selftest.run(rom)          # no workdir -> must use a private temp dir
+    assert victim.read_text() == "my own work"
+
+
+def test_map_without_a_hash_is_not_called_verified(tmp_path: Path):
+    rom = _write_rom(tmp_path, build_fixture_rom())
+    map_path = tmp_path / "m.json"
+    map_path.write_text(json.dumps({
+        "fields": [{"name": "t", "at": "0x120", "type": "str", "size": 8}]}))
+    result = selftest.run(rom, map_path=map_path, workdir=tmp_path)
+    rows = {name: detail for _, name, detail in result.checks}
+    assert "data map matches this ROM" not in rows
+    assert "no rom_sha256" in rows["data map reads cleanly"]

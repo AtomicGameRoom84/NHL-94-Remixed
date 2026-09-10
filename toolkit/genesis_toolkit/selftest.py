@@ -16,6 +16,7 @@ That needs an emulator and a human; see the README.
 from __future__ import annotations
 
 import hashlib
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -58,7 +59,11 @@ def run(rom_path: Path, map_path: Path | None = None,
     out = Result()
     rom = rom_path.read_bytes()
     digest_before = hashlib.sha256(rom).hexdigest()
-    workdir = workdir or rom_path.parent
+    # Default to a private temp dir. Earlier this wrote fixed-name
+    # scratch files next to the ROM and deleted them unconditionally,
+    # which would destroy a user's own selftest.s without warning.
+    scratch = tempfile.TemporaryDirectory(prefix="genesis-selftest-")
+    workdir = workdir or Path(scratch.name)
 
     # --- header -------------------------------------------------------
     try:
@@ -164,13 +169,21 @@ def run(rom_path: Path, map_path: Path | None = None,
                            f"{len(unreadable)} unreadable, e.g. {unreadable[:3]}")
             elif warning:
                 out.record(FAIL, "data map matches this ROM", warning)
-            else:
+            elif dmap.rom_sha256:
                 out.record(PASS, "data map matches this ROM",
                            f"{len(dmap.fields)} fields, hash verified")
+            else:
+                # No rom_sha256 in the map: every field read, but
+                # nothing ties the map to this dump. Saying "verified"
+                # here would be false assurance.
+                out.record(PASS, "data map reads cleanly",
+                           f"{len(dmap.fields)} fields; map declares no "
+                           f"rom_sha256, so it is not tied to this ROM")
         except Exception as e:
             out.record(FAIL, "data map loads", str(e))
 
     # --- the original must be untouched ------------------------------
+    scratch.cleanup()
     digest_after = hashlib.sha256(rom_path.read_bytes()).hexdigest()
     if digest_after == digest_before:
         out.record(PASS, "original ROM file untouched", digest_after[:16] + "...")

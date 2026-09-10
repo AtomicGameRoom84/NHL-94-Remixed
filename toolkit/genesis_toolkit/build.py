@@ -94,9 +94,13 @@ def assemble(asm_path: Path, out_bin: Path) -> None:
 
 # Mnemonics whose operand is encoded as a displacement from the current
 # address rather than as the address itself.
+# hs/lo are GAS's aliases for cc/cs; missing them here would let a
+# branch written with the alias slip past the bare-target guard and
+# assemble to a zero displacement.
+_CONDITIONS = ("ra|sr|hi|ls|cc|cs|hs|lo|ne|eq|vc|vs|pl|mi|ge|lt|gt|le")
 _PCREL_MNEMONIC = re.compile(
-    r"^\s*(?:b(?:ra|sr|hi|ls|cc|cs|ne|eq|vc|vs|pl|mi|ge|lt|gt|le)"
-    r"|db(?:ra|f|t|hi|ls|cc|cs|ne|eq|vc|vs|pl|mi|ge|lt|gt|le))"
+    rf"^\s*(?:b(?:{_CONDITIONS})"
+    rf"|db(?:{_CONDITIONS}|f|t))"
     r"(?:\.[bwsl])?\s+(.+)$", re.IGNORECASE)
 _BARE_NUMBER = re.compile(r"^[-+]?(?:0x[0-9a-fA-F]+|\$[0-9a-fA-F]+|\d+)$")
 # A label may share a line with the instruction it marks.

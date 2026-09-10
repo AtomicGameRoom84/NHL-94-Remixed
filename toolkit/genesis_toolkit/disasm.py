@@ -59,7 +59,24 @@ class DisasmResult:
     decode_failures: list[int] = field(default_factory=list)
 
 
+# A displacement attached to a register, e.g. "$6(a0)" or
+# "$10(a0,d0.w)": the number is an offset from whatever the register
+# holds at runtime, not an address we can resolve statically.
+_REGISTER_RELATIVE = re.compile(r"\$[0-9A-Fa-f]+\((?!pc\b)", re.IGNORECASE)
+
+
 def _branch_target(mnemonic: str, op_str: str) -> int | None:
+    """The absolute target of a control transfer, or None when it can't
+    be known without running the program.
+
+    Only operands that name an address outright count. `jsr $6(a0)`
+    jumps to six bytes past whatever a0 happens to contain, so reading
+    the 6 as an address would enqueue the start of the vector table as
+    code -- and recursive descent would then happily disassemble the
+    cartridge header.
+    """
+    if _REGISTER_RELATIVE.search(op_str):
+        return None
     matches = _HEXNUM.findall(op_str)
     if not matches:
         return None
