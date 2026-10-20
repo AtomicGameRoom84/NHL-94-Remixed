@@ -1,0 +1,6 @@
+Put your own legally obtained NHL '94 (USA, Europe) cartridge dump in this
+folder. Nothing in here is committed -- see ../.gitignore.
+
+The expected file is 1,048,576 bytes. tools/verify.py checks it against
+tools/rom-lock.json and names the hash it found if it is a revision this
+project has not seen.

@@ -1,0 +1,15 @@
+{
+  "comment": "Cartridge revisions this project knows how to build. A ROM is identified by hash, never by filename, so a renamed or wrong-region dump is rejected rather than half-built.",
+  "note_on_sha256": "sha256 is null where this project has verified a dump by SHA-1 only. tools/verify.py matches on whichever digests are present and prints both for any ROM it does not recognise, so an unknown revision is one copy-paste away from being supported.",
+  "revisions": [
+    {
+      "id": "nhl94-ue",
+      "title": "NHL '94 (USA, Europe)",
+      "size": 1048576,
+      "sha1": "7b1489ab501258133bf03e5f0892b77d04312580",
+      "sha256": null,
+      "header_serial": "GM T-50406-00",
+      "verified": "Round-tripped byte-identically through disassembly and reassembly on 2026-09-10."
+    }
+  ]
+}

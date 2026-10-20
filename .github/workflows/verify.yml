@@ -1,0 +1,55 @@
+name: verify
+
+# Proves the pipeline without a cartridge: the test suite builds a
+# synthetic fixture, so CI can enforce the byte-exact invariant without
+# any copyrighted data ever touching the runner.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build the pinned assembler
+        run: python3 tools/setup.py
+
+      - name: Confirm the assembler is the pinned version
+        run: |
+          .local/vasm/vasmm68k_mot -quiet 2>&1 | head -3 || true
+          grep -o '"version": "[^"]*"' tools/toolchain-lock.json
+
+      - name: Install test dependencies
+        run: python3 -m pip install --upgrade pytest
+
+      - name: Byte-exact pipeline tests
+        run: python3 -m pytest tests/ -q
+
+      - name: Mod toolkit tests
+        run: |
+          python3 -m pip install ./toolkit
+          python3 -m pip install pytest
+          python3 -m pytest toolkit/tests -q
+
+      - name: Refuse any committed cartridge data
+        run: |
+          # The audit in ASSET_AUDIT.md is only worth something if it is
+          # enforced. Fail the build if a ROM or a carved blob is tracked.
+          if git ls-files | grep -Ei '\.(bin|gen|smd|32x|68k|ips)$'; then
+            echo "::error::cartridge-derived file is tracked; see ASSET_AUDIT.md"
+            exit 1
+          fi
+          if git ls-files rom/ | grep -v 'DROP-ROM-HERE.txt'; then
+            echo "::error::something other than instructions is tracked in rom/"
+            exit 1
+          fi
+          echo "No cartridge-derived files are tracked."

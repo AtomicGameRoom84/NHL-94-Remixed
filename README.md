@@ -1,135 +1,113 @@
-# NHL-94-Remixed
+# NHL '94 Remixed
 
-A modding toolkit for Sega Genesis / Mega Drive ROMs, built while taking
-apart NHL '94 but deliberately not tied to it.
+A matching disassembly of NHL '94 (USA, Europe), plus mod tooling for
+the cartridge.
 
-Everything here works from a ROM *you* supply. No ROM, no disassembly of
-one, and no game content lives in this repository — see
-[What's deliberately not here](#whats-deliberately-not-here).
+**You supply your own cartridge.** Nothing derived from the ROM is in
+this repository, and nothing derived from it can be committed — see
+[ASSET_AUDIT.md](ASSET_AUDIT.md).
 
-**New to this? Start with [GETTING-STARTED.md](GETTING-STARTED.md)** --
-a step-by-step Windows walkthrough from installing Python to seeing your
-first mod in an emulator, with a way to check each step worked.
+## What "matching disassembly" means, and why not C
 
-## The mental model
+NHL '94 was written in hand-written 68000 assembly, like nearly every
+Genesis game. There is no C source to recover, so there is no honest C
+decompilation to produce — anything claiming to be one is a rewrite.
 
-The thing people usually trip over: **you don't patch the disassembly,
-you patch the ROM.** The disassembly is a *view* of the ROM you consult
-to work out what to change.
+The real target is a **matching disassembly**: annotated 68000 assembly,
+split into named files, that reassembles to a byte-identical cartridge.
+That is the standard the Sonic Retro and Kid Chameleon disassemblies set,
+and it is what this project builds.
 
-```
-  your ROM  ──disasm──▶  game.s        a reference view, ~6 MB of 68000 asm
-     │                                 regenerated on demand, never stored
-     │
-     └──────patch───▶  modded.md       what you actually play
-                ▲
-             mod.json                  your edits: small, diffable, in git
-```
+## The one invariant
 
-Because `game.s` is reproducible from your own ROM in one command, it
-never needs to be committed — which is also why you won't find it here.
+The build reproduces the cartridge byte for byte, from the first commit.
 
-## Quick start
+With no regions declared, the whole ROM is a single `incbin` and the
+rebuild matches trivially. Each identified routine replaces a slice of
+that blob with committed assembly, and the rebuild either still matches
+or the region is wrong. There is no in-between state to drift into.
 
-**Want a .exe instead of Python?** The **Actions** tab → *Build Windows
-exe* → newest run → download `genesis-toolkit-windows`. It's a single
-standalone executable plus the data maps; no Python, no install. Built on
-a Windows runner because PyInstaller can't cross-compile, and smoke-tested
-in CI before it's published.
+So "how much is understood" only ever goes up, and a mistake is a failed
+build rather than a subtly wrong ROM. This is deliberately the opposite
+of disassembling outward from the entry points and measuring how far you
+got.
 
-```
-cd toolkit
-pip install -e .
+## Setup
 
-genesis-toolkit header   "your rom.md"                       # what am I holding?
-genesis-toolkit map-list "your rom.md" maps/nhl94-ue.json    # named fields
-genesis-toolkit map-set  "your rom.md" maps/nhl94-ue.json mymod.json \
-                         --set "team.TOR.nickname=Blue Jays"
-genesis-toolkit patch    "your rom.md" mymod.json modded.md  # runnable ROM
-genesis-toolkit ips-create "your rom.md" modded.md mymod.ips # shareable patch
+```sh
+python3 tools/setup.py          # fetch + build the pinned assembler
+cp "NHL '94 (USA, Europe).md" rom/nhl94.md
+python3 tools/verify.py         # must print BIT-PERFECT
 ```
 
-Load `modded.md` in any emulator (BlastEm, Genesis Plus GX, Exodus, a
-RetroArch core) or flash it to a cartridge.
+`tools/setup.py` needs Python 3.11+, `make`, and a C compiler. On
+Windows use MSYS2/MinGW, or put a prebuilt `vasmm68k_mot` on your `PATH`
+and skip setup — see [docs/SETUP.md](docs/SETUP.md).
 
-**Eleven of the thirteen commands run with nothing but Python**, on
-Windows included. Only `build` and `verify` — plus edits written as
-`asm` rather than `bytes` — shell out to GNU m68k binutils (`apt install
-binutils-m68k-linux-gnu`, or WSL/MSYS2 on Windows). The toolkit says so
-explicitly rather than failing obscurely when they're absent.
+The cartridge is identified by hash, not filename. An unrecognised dump
+is rejected with its own digests printed so you can add it to
+`tools/rom-lock.json` deliberately.
 
-## Testing it
+## Layout
 
+| Path | What |
+| --- | --- |
+| `src/nhl94.asm` | Build root. Almost empty by design |
+| `src/regions.json` | Identified code regions. Empty is the correct start |
+| `src/code/` | Assembly for identified routines |
+| `tools/split.py` | Carves the cartridge into blobs + identified code |
+| `tools/build.py` | Assembles with `vasm -no-opt` |
+| `tools/verify.py` | The bit-perfect gate |
+| `tools/romcheck.py` | Identifies a dump by hash |
+| `docs/ROM_MAP.md` | Cartridge addresses, each with its evidence |
+| `docs/RAM_MAP.md` | Where gameplay values live |
+| `docs/FIDELITY.md` | What counts as evidence; deviations |
+| `toolkit/` | Mod tooling: team names, patches, IPS, data maps |
+
+## How to make progress
+
+The highest-leverage step is **not** more static analysis. Capture a
+code/data log from an emulator (BizHawk's CDL, Exodus, or Gens-KMod):
+play every mode and the log records which bytes the CPU actually
+executed, including which start an opcode. Following branches statically
+reaches about 4.6% of this cartridge; a thorough log can reach most of
+the real code.
+
+Then, per routine: disassemble it, name it, add it to `regions.json`
+with its evidence, rebuild, confirm BIT-PERFECT, commit.
+
+## If you only want to mod the game
+
+You do not need any of the above. Gameplay values live in RAM, and
+`toolkit/` already edits team names and applies guarded patches:
+
+```sh
+genesis-toolkit map-list rom/nhl94.md toolkit/maps/nhl94-ue.json
+genesis-toolkit map-set  rom/nhl94.md toolkit/maps/nhl94-ue.json mymod.json \
+    --set team.BOS.city="Atomic" --set team.BOS.nickname="Rooms"
+genesis-toolkit patch    rom/nhl94.md mymod.json out.md
 ```
-cd toolkit
-pip install -e ".[test]"                             # adds the test runner
-python -m pytest                                     # 62 tests, no ROM needed
-genesis-toolkit selftest "your rom.md" --map maps/nhl94-ue.json
-```
 
-`selftest` checks every guarantee end to end against *your* cartridge —
-header and checksum, a byte-exact disassemble/reassemble round-trip,
-patch application and guard behaviour, checksum repair, an IPS
-round-trip, the data map, and that your original file is untouched
-afterwards. It takes a couple of seconds and exits non-zero on failure,
-so it works in CI.
+28 teams, 112 named fields, header checksum fixed automatically, and
+every edit carries an `expect` guard so it refuses to apply to the wrong
+revision. See [GETTING-STARTED.md](GETTING-STARTED.md).
 
-It cannot tell you a ROM **boots**. That needs an emulator and a human:
-build an *unmodified* ROM first (it should be byte-identical, so any
-misbehaviour is the toolkit's fault, not your mod's), then apply a mod
-with a visible effect — renaming a team shows up on screen — and confirm
-you see it.
+For speed and scoring, see the method in [docs/RAM_MAP.md](docs/RAM_MAP.md) —
+an emulator RAM search plus a write breakpoint finds those in an
+afternoon, with no disassembly required.
 
-## What's in here
+## State of the work
 
-| | |
-|---|---|
-| `toolkit/genesis_toolkit/` | the library and `genesis-toolkit` CLI |
-| `toolkit/maps/nhl94-ue.json` | data map: all 28 NHL '94 team headers |
-| `toolkit/tests/` | 62 tests, incl. a synthetic non-copyrighted fixture ROM |
+Read [VERIFICATION.md](VERIFICATION.md) before trusting anything here.
+Short version: the pipeline is proven byte-exact on a synthetic fixture
+and has not yet been run against the real cartridge, and
+`src/regions.json` is empty.
 
-Capabilities, in rough order of how you'd meet them:
+## Credit
 
-- **Read** a cartridge header, checksum, and 68000 vector table.
-- **Disassemble** by recursive descent from the vector table, then
-  **reassemble byte-exact** and diff against the original to prove the
-  disassembly is faithful.
-- **Edit by name** through data maps, instead of memorising offsets.
-- **Patch** a ROM from a small JSON mod file, fixing the header checksum.
-- **Share** mods as IPS patches rather than modified ROMs.
-- **Hunt** for gameplay values with `consts`, which lists code using a
-  given immediate.
-
-See [`toolkit/README.md`](toolkit/README.md) for the full command
-reference, the mod file format, and the workflow for locating a value
-you want to change.
-
-## Design stance: fail loudly
-
-ROM patching is notorious for going wrong *quietly* — you get a ROM that
-boots and misbehaves, with nothing to point at. Most of the engineering
-here is spent making that impossible, and most of it exists because the
-tests caught the toolkit doing exactly what it now refuses to do:
-
-- **Mods carry `expect` guards.** An edit records the bytes it assumes
-  are there and refuses to apply otherwise, so a mod aimed at the wrong
-  ROM revision is an error naming the address, not silent corruption.
-- **Branches can't be written against bare addresses.** GNU as reads
-  `bra.w 0x420` as a *displacement*, not a target, and encodes zero — an
-  infinite loop, no diagnostic. Rejected outright; write `rom+0x420`.
-- **Undefined labels are caught.** With no link step, `as` and `objcopy`
-  both exit 0 and write zeros into the unresolved field. The assembler
-  step checks for undefined symbols itself.
-- **Data maps record their ROM's SHA-256** and warn when read against a
-  different image.
-- Overlapping edits, out-of-range edits, and anything that would resize
-  a cartridge are all errors.
-
-## What's deliberately not here
-
-No ROM, no disassembly output, no extracted game content. Data maps
-store *addresses and field names only* — they describe layout, they
-don't copy the game. Mods are patches, so they carry your changes and
-nothing of the original.
-
-Bring your own ROM; the toolkit does the rest.
+Structure modelled on [Resident Doom](https://github.com/Drelvak/Resident-Doom)
+(pinned inputs, generate-locally, publication audit) and
+[kid-chameleon-disasm](https://github.com/sonicretro/kid-chameleon-disasm)
+(split-and-rebuild). Addresses cited in `docs/ROM_MAP.md` come partly
+from KanedaFr's published IDA work. Full list in
+[THIRD_PARTY.md](THIRD_PARTY.md).

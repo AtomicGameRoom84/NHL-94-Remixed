@@ -1,0 +1,5 @@
+{
+    "rom": "nhl94-ue",
+    "comment": "Code regions identified so far. Empty is correct and byte-exact: the whole cartridge is one incbin until a region is proven. See docs/FIDELITY.md for what counts as evidence.",
+    "regions": []
+}
