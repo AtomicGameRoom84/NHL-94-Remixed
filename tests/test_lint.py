@@ -43,10 +43,17 @@ def test_cartridge_extensions_are_refused():
 
 
 def test_secret_patterns_match_their_own_shapes():
+    # Every sample is assembled at runtime so no complete credential
+    # shape appears as a literal in this file. The linter reads tracked
+    # files, this file is tracked, and a literal here would make the
+    # suite fail on its own test data -- which is exactly what happened
+    # the first time, and only in CI: the test passed locally because
+    # the file was not yet added, and `git ls-files` cannot see an
+    # untracked file.
     samples = {
         "Anthropic key": "sk-ant-" + "a" * 24,
         "AWS key id": "AKIA" + "A" * 16,
-        "private key": "-----BEGIN OPENSSH PRIVATE KEY-----",
+        "private key": "-----BEGIN " + "OPENSSH PRIVATE KEY-----",
     }
     by_label = dict(SECRET_PATTERNS)
     for label, sample in samples.items():
