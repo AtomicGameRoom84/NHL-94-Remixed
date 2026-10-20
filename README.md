@@ -59,6 +59,9 @@ is rejected with its own digests printed so you can add it to
 | `tools/build.py` | Assembles with `vasm -no-opt` |
 | `tools/verify.py` | The bit-perfect gate |
 | `tools/romcheck.py` | Identifies a dump by hash |
+| `tools/candidates.py` | Ranks uncarved routines, cheapest first |
+| `tools/lint.py` | Enforces the audit and the naming rule |
+| `src/blocked.json` | Routines that resisted, and why |
 | `docs/ROM_MAP.md` | Cartridge addresses, each with its evidence |
 | `docs/RAM_MAP.md` | Where gameplay values live |
 | `docs/FIDELITY.md` | What counts as evidence; deviations |
@@ -73,8 +76,24 @@ executed, including which start an opcode. Following branches statically
 reaches about 4.6% of this cartridge; a thorough log can reach most of
 the real code.
 
-Then, per routine: disassemble it, name it, add it to `regions.json`
-with its evidence, rebuild, confirm BIT-PERFECT, commit.
+Then work the queue. `tools/candidates.py` ranks the routines not yet
+carved cheapest first, by instruction, branch and jump count:
+
+```
+  address   cost  bytes  insns  br  jmp  ends  note
+ 0x000418      3     10      3   0    0  yes
+ 0x000400     12     22      8   2    0  yes
+```
+
+Start at the top: disassemble it, name it, add it to `regions.json` with
+its evidence, rebuild, confirm BIT-PERFECT, commit, run it again.
+Ordering matters more than it looks — cheap routines land, and each one
+adds an understood idiom that makes the expensive ones cheaper.
+
+If a routine resists byte-exact reassembly, record *why* in
+`src/blocked.json`. After ten recorded attempts it stops being offered,
+so the queue cannot livelock on one stubborn case, and the reasons
+accumulate into a punch list rather than a record of guesses.
 
 ## If you only want to mod the game
 

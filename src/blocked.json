@@ -1,0 +1,4 @@
+{
+    "comment": "Routines that resisted byte-exact reassembly, with the reason. Not a record of guesses -- a punch list. A routine held at the attempt cap stops being offered as work until its reason is addressed.",
+    "routines": {}
+}
