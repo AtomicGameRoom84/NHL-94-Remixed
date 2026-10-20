@@ -40,16 +40,8 @@ jobs:
           python3 -m pip install pytest
           python3 -m pytest toolkit/tests -q
 
-      - name: Refuse any committed cartridge data
-        run: |
-          # The audit in ASSET_AUDIT.md is only worth something if it is
-          # enforced. Fail the build if a ROM or a carved blob is tracked.
-          if git ls-files | grep -Ei '\.(bin|gen|smd|32x|68k|ips)$'; then
-            echo "::error::cartridge-derived file is tracked; see ASSET_AUDIT.md"
-            exit 1
-          fi
-          if git ls-files rom/ | grep -v 'DROP-ROM-HERE.txt'; then
-            echo "::error::something other than instructions is tracked in rom/"
-            exit 1
-          fi
-          echo "No cartridge-derived files are tracked."
+      - name: Audit what is tracked
+        # ASSET_AUDIT.md and FIDELITY.md are prose until something
+        # enforces them. tools/lint.py is that, and it inspects tracked
+        # files only -- not the fetched toolchain in .local/.
+        run: python3 tools/lint.py

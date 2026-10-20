@@ -30,6 +30,11 @@ with `zeroOffsetOptimization = 0` is an equally valid choice.
 - **Kodewerx**, RAM tracing guide —
   <https://www.kodewerx.org/forum/viewtopic.php?p=35048>. Method and the
   game-clock address cited in `docs/RAM_MAP.md`.
+- **universal-modder**, rehan-remade — <https://github.com/rehan-remade/universal-modder>.
+  MIT. The secret and decompiler-output patterns in `tools/lint.py` are
+  adapted from its `um publish check`; `docs/ROM_MAP.md` and
+  `VERIFICATION.md` owe its `retro-decomp.md` reference the agent loop
+  this project's region workflow follows.
 - **Resident Doom**, Drelvak — <https://github.com/Drelvak/Resident-Doom>.
   The audit, pinned-input and generate-locally structure this project
   follows. No code taken.

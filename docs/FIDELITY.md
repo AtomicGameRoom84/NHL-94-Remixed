@@ -44,6 +44,18 @@ Not evidence, and not acceptable:
 - "The checksum still passes." The header checksum is 16 bits. It says
   nothing useful about whether a region is correct.
 
+## Enforced, not merely requested
+
+`tools/lint.py` runs in CI and fails the build on:
+
+- a raw decompiler label in committed assembly (`sub_0117b2`,
+  `off_11AF4`, `FUN_00401000`). A region named after its own address has
+  been *located*, not understood; committing one as code defeats the
+  naming and evidence requirement above. Documentation may still cite
+  someone else's published label — that is how a finding stays checkable.
+- any cartridge-derived file becoming tracked.
+- credentials, and anything but instructions inside `rom/`.
+
 ## Known deviations
 
 None. The build is byte-identical to the cartridge, so by construction
